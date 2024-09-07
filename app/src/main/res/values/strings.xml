@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">trainning_gradle</string>
+    <string name="todo">todo</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="woman_s_cloth">Woman\'s Cloth</string>
+    <string name="man_s_cloth">Man\'s Cloth</string>
+    <string name="gold">Gold</string>
+    <string name="electronic">Electronic</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+
+
+    <string name="sample_text">Lorem ipsum dolor sit amet,\n consectetur adipiscing elit,\n sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Egestas purus viverra accumsan in nisl nis.</string>
+</resources>

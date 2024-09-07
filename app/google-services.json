@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "164390879936",
+    "project_id": "trainning-gradle",
+    "storage_bucket": "trainning-gradle.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:164390879936:android:2fba231a1f464a0d1a2325",
+        "android_client_info": {
+          "package_name": "ir.arminapp.trainning_gradle"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2lvfEClmqim2TG0yMZ-KHSV9u0AWm0VM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
