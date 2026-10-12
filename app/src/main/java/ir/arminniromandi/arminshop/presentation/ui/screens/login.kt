@@ -1,5 +1,6 @@
 package ir.arminniromandi.arminshop.presentation.ui.screens
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -168,6 +170,7 @@ fun LoginScreenContent(
                         EmailStepContent(
                             email = uiState.email,
                             isSubmitEnabled = uiState.isEmailSubmitEnabled,
+                            isError = uiState.isEmailError,
                             onEmailChange = onEmailChange,
                             onSubmit = onEmailSubmit
                         )
@@ -324,9 +327,11 @@ private fun LoginHeader() {
 private fun EmailStepContent(
     email: String,
     isSubmitEnabled: Boolean,
+    isError: Boolean,
     onEmailChange: (String) -> Unit,
     onSubmit: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.Start
@@ -361,16 +366,35 @@ private fun EmailStepContent(
             onValueChange = onEmailChange,
             placeholder = "ایمیل خود را وارد کنید",
             keyboardType = KeyboardType.Email,
+            isError = isError,
             imeAction = ImeAction.Done,
             onImeAction = onSubmit
         )
+        
+        // Error message if email is invalid
+        AnimatedVisibility(visible = isError) {
+            Column {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "ایمیل وارد شده معتبر نیست",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // Submit Button
         PrimaryButton(
             text = "تأیید و ادامه",
-            onClick = onSubmit,
+            onClick = { onSubmit()
+                Toast.makeText(context, "کد تایید 1234 یا 0000", Toast.LENGTH_LONG).show()
+            },
             enabled = isSubmitEnabled
         )
     }

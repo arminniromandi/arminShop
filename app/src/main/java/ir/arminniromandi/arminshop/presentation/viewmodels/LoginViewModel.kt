@@ -2,6 +2,9 @@ package ir.arminniromandi.arminshop.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import ir.arminniromandi.arminshop.domain.repository.UserRepository
+import ir.arminniromandi.arminshop.domain.usecase.ValidateEmailUseCase
 import ir.arminniromandi.arminshop.presentation.ui.screens.LoginStep
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -11,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
+import javax.inject.Inject
 
 /**
  * UI State for the Login screen
@@ -22,6 +26,7 @@ data class LoginUiState(
     val fullName: String = "",
     val isLoading: Boolean = false,
     val isCodeError: Boolean = false,
+    val isEmailError: Boolean = false,
     val timerSeconds: Int = 201
 ) {
     val isEmailSubmitEnabled: Boolean
@@ -37,15 +42,36 @@ data class LoginUiState(
         get() = formatTimer(timerSeconds)
 }
 
-class LoginViewModel : ViewModel() {
+@HiltViewModel
+class LoginViewModel @Inject constructor(
+    private val userRepository: UserRepository,
+    private val validateEmailUseCase: ValidateEmailUseCase
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
 
+    init {
+        checkUserLoggedIn()
+    }
+
+    private fun checkUserLoggedIn() {
+        viewModelScope.launch {
+            userRepository.getUserData().collect { user ->
+                // User state collection if needed
+            }
+        }
+    }
+
     fun onEmailChange(newEmail: String) {
-        _uiState.update { it.copy(email = newEmail) }
+        _uiState.update {
+            it.copy(
+                email = newEmail,
+                isEmailError = false
+            )
+        }
     }
 
     fun onVerificationCodeChange(newCode: String) {
@@ -63,10 +89,13 @@ class LoginViewModel : ViewModel() {
 
     fun submitEmail() {
         val currentEmail = _uiState.value.email
-        if (currentEmail.isBlank()) return
+        if (!validateEmailUseCase(currentEmail)) {
+            _uiState.update { it.copy(isEmailError = true) }
+            return
+        }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, isEmailError = false) }
             delay(1200L)
             _uiState.update {
                 it.copy(
@@ -82,6 +111,7 @@ class LoginViewModel : ViewModel() {
 
     fun submitVerificationCode() {
         val code = _uiState.value.verificationCode
+        val currentEmail = _uiState.value.email
         if (code.isBlank()) return
 
         viewModelScope.launch {
@@ -89,6 +119,10 @@ class LoginViewModel : ViewModel() {
             delay(1500L)
             if ((code == "1234") || (code == "0000")) {
                 stopTimer()
+                // Save email and login state to DataStore when verification code is successfully verified
+                userRepository.saveEmail(currentEmail)
+                userRepository.saveLoginState(true)
+
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -108,9 +142,16 @@ class LoginViewModel : ViewModel() {
     }
 
     fun submitUserInfo(onSuccess: () -> Unit) {
+        val currentName = _uiState.value.fullName
+        if (currentName.isBlank()) return
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            delay(1000L)
+
+            // Save full name to DataStore after name is submitted
+            userRepository.saveFullName(currentName)
+
+            delay(1000L) // Simulate network request
             _uiState.update { it.copy(isLoading = false) }
             onSuccess()
         }
@@ -122,7 +163,8 @@ class LoginViewModel : ViewModel() {
             it.copy(
                 currentStep = LoginStep.EMAIL,
                 verificationCode = "",
-                isCodeError = false
+                isCodeError = false,
+                isEmailError = false
             )
         }
     }
