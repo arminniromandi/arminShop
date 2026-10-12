@@ -4,8 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import ir.arminniromandi.arminshop.screens.LoginScreen
-import ir.arminniromandi.arminshop.ui.theme.ArminShopTheme
+import ir.arminniromandi.arminshop.presentation.ui.screens.MainScreen
+import ir.arminniromandi.arminshop.presentation.ui.theme.ArminShopTheme
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -13,7 +14,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ArminShopTheme {
-                LoginScreen()
+                MainScreen()
+
             }
         }
     }

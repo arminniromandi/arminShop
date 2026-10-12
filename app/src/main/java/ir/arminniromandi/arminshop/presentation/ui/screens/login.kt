@@ -1,4 +1,4 @@
-package ir.arminniromandi.arminshop.screens
+package ir.arminniromandi.arminshop.presentation.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
@@ -29,13 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,9 +55,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import java.util.Locale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import ir.arminniromandi.arminshop.presentation.ui.theme.ArminShopTheme
+import ir.arminniromandi.arminshop.presentation.ui.theme.ShopDecorativeCircle
+import ir.arminniromandi.arminshop.presentation.ui.theme.ShopPrimaryRedGradient
+import ir.arminniromandi.arminshop.presentation.ui.theme.ShopSecondaryText
+import ir.arminniromandi.arminshop.presentation.ui.theme.ShopTextFieldBorder
+import ir.arminniromandi.arminshop.presentation.ui.theme.ShopTimerBg
+import ir.arminniromandi.arminshop.presentation.ui.theme.ShopPlaceholder
+import ir.arminniromandi.arminshop.presentation.viewmodels.LoginUiState
+import ir.arminniromandi.arminshop.presentation.viewmodels.LoginViewModel
 
 /**
  * Enum representing login steps
@@ -74,67 +76,76 @@ enum class LoginStep {
     USER_INFO
 }
 
-/**
- * Color palette used in Login Screen
- */
-private object LoginColors {
-    val Background = Color(0xFFFFF6EE)
-    val DecorativeCircle = Color(0xFFFDE8D7)
-    val PrimaryRed = Color(0xFFFA4A23)
-    val PrimaryRedGradient = Color(0xFFE53517)
-    val DarkText = Color(0xFF1E1E1E)
-    val SecondaryText = Color(0xFF666666)
-    val TextFieldBg = Color.White
-    val TextFieldBorder = Color(0xFFE0E0E0)
-    val ErrorRed = Color(0xFFD32F2F)
-    val TimerBg = Color(0xFFF3ECE4)
-    val Placeholder = Color(0xFF9E9E9E)
-}
-
-
 @Preview
 @Composable
-private fun preView() {
-
-    LoginScreen()
-
+private fun LoginScreenPreview() {
+    ArminShopTheme {
+        LoginScreenContent(
+            uiState = LoginUiState(),
+            onEmailChange = {},
+            onEmailSubmit = {},
+            onCodeChange = {},
+            onCodeSubmit = {},
+            onEditEmail = {},
+            onResendCode = {},
+            onFullNameChange = {},
+            onUserInfoSubmit = {},
+            onSkipUserInfo = {}
+        )
+    }
 }
 
 /**
- * Main Login Screen Composable containing all steps and dialogs
+ * Main Login Screen Composable adhering strictly to project theme & typography rules.
  */
 @Composable
 fun LoginScreen(
     modifier: Modifier = Modifier,
+    viewModel: LoginViewModel = viewModel(),
     onLoginSuccess: () -> Unit = {}
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LoginScreenContent(
+        modifier = modifier,
+        uiState = uiState,
+        onEmailChange = viewModel::onEmailChange,
+        onEmailSubmit = viewModel::submitEmail,
+        onCodeChange = viewModel::onVerificationCodeChange,
+        onCodeSubmit = viewModel::submitVerificationCode,
+        onEditEmail = viewModel::editEmail,
+        onResendCode = viewModel::resendCode,
+        onFullNameChange = viewModel::onFullNameChange,
+        onUserInfoSubmit = { viewModel.submitUserInfo(onLoginSuccess) },
+        onSkipUserInfo = onLoginSuccess
+    )
+}
+
+/**
+ * Stateless Login Screen Composable adhering strictly to project theme & typography rules.
+ */
+@Composable
+fun LoginScreenContent(
+    uiState: LoginUiState,
+    onEmailChange: (String) -> Unit,
+    onEmailSubmit: () -> Unit,
+    onCodeChange: (String) -> Unit,
+    onCodeSubmit: () -> Unit,
+    onEditEmail: () -> Unit,
+    onResendCode: () -> Unit,
+    onFullNameChange: (String) -> Unit,
+    onUserInfoSubmit: () -> Unit,
+    onSkipUserInfo: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     // Force RTL layout direction for Persian UI
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        var currentStep by remember { mutableStateOf(LoginStep.EMAIL) }
-        var email by remember { mutableStateOf("") }
-        var verificationCode by remember { mutableStateOf("") }
-        var fullName by remember { mutableStateOf("") }
-
-        var isLoading by remember { mutableStateOf(false) }
-        var isCodeError by remember { mutableStateOf(false) }
-        var timerSeconds by remember { mutableIntStateOf(201) } // ~03:21 in Persian (۳۴:۲۱ / ۰۳:۲۱)
-
-        val coroutineScope = rememberCoroutineScope()
-
-        // Timer countdown effect for code verification screen
-        LaunchedEffect(currentStep, timerSeconds) {
-            if (currentStep == LoginStep.VERIFICATION_CODE && timerSeconds > 0) {
-                delay(1000L)
-                timerSeconds--
-            }
-        }
-
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(LoginColors.Background)
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            // Decorative background shapes
+            // Decorative background shapes using theme colors
             LoginBackground()
 
             // Main Content Container
@@ -152,86 +163,44 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(36.dp))
 
                 // Step content according to current step state
-                when (currentStep) {
+                when (uiState.currentStep) {
                     LoginStep.EMAIL -> {
                         EmailStepContent(
-                            email = email,
-                            onEmailChange = { email = it },
-                            onSubmit = {
-                                if (email.isNotBlank()) {
-                                    isLoading = true
-                                    coroutineScope.launch {
-                                        delay(1200L) // Simulate network call
-                                        isLoading = false
-                                        currentStep = LoginStep.VERIFICATION_CODE
-                                        timerSeconds = 201
-                                        isCodeError = false
-                                    }
-                                }
-                            }
+                            email = uiState.email,
+                            isSubmitEnabled = uiState.isEmailSubmitEnabled,
+                            onEmailChange = onEmailChange,
+                            onSubmit = onEmailSubmit
                         )
                     }
 
                     LoginStep.VERIFICATION_CODE -> {
                         VerificationCodeStepContent(
-                            email = email,
-                            code = verificationCode,
-                            onCodeChange = {
-                                verificationCode = it
-                                isCodeError = false
-                            },
-                            isError = isCodeError,
-                            timerText = formatTimer(timerSeconds),
-                            onSubmit = {
-                                if (verificationCode.isNotBlank()) {
-                                    isLoading = true
-                                    coroutineScope.launch {
-                                        delay(1500L) // Simulate API verification
-                                        isLoading = false
-                                        // Demo logic: code "1234" succeeds, otherwise triggers error state
-                                        if (verificationCode == "1234" || verificationCode == "0000") {
-                                            currentStep = LoginStep.USER_INFO
-                                        } else {
-                                            isCodeError = true
-                                        }
-                                    }
-                                }
-                            },
-                            onEditEmail = {
-                                currentStep = LoginStep.EMAIL
-                                verificationCode = ""
-                                isCodeError = false
-                            },
-                            onResendCode = {
-                                timerSeconds = 201
-                                isCodeError = false
-                                verificationCode = ""
-                            }
+                            email = uiState.email,
+                            code = uiState.verificationCode,
+                            isSubmitEnabled = uiState.isCodeSubmitEnabled,
+                            onCodeChange = onCodeChange,
+                            isError = uiState.isCodeError,
+                            timerText = uiState.formattedTimer,
+                            onSubmit = onCodeSubmit,
+                            onEditEmail = onEditEmail,
+                            onResendCode = onResendCode
                         )
                     }
 
                     LoginStep.USER_INFO -> {
                         UserInfoStepContent(
-                            fullName = fullName,
-                            onFullNameChange = { fullName = it },
-                            onSubmit = {
-                                isLoading = true
-                                coroutineScope.launch {
-                                    delay(1000L)
-                                    isLoading = false
-                                    onLoginSuccess()
-                                }
-                            },
-                            onSkip = {
-                                onLoginSuccess()
-                            }
+                            fullName = uiState.fullName,
+                            isSubmitEnabled = uiState.isUserInfoSubmitEnabled,
+                            onFullNameChange = onFullNameChange,
+                            onSubmit = onUserInfoSubmit,
+                            onSkip = onSkipUserInfo
                         )
                     }
                 }
             }
 
             // Loading Dialog ("لطفا صبر کنید")
-            if (isLoading) {
+            if (uiState.isLoading) {
                 PleaseWaitDialog()
             }
         }
@@ -249,21 +218,21 @@ private fun LoginBackground() {
 
         // Top-right soft circle
         drawCircle(
-            color = LoginColors.DecorativeCircle,
+            color = ShopDecorativeCircle,
             radius = width * 0.48f,
             center = Offset(width * 0.95f, height * 0.08f)
         )
 
         // Top-left small arc
         drawCircle(
-            color = LoginColors.DecorativeCircle.copy(alpha = 0.6f),
+            color = ShopDecorativeCircle.copy(alpha = 0.6f),
             radius = width * 0.28f,
             center = Offset(-width * 0.08f, height * 0.28f)
         )
 
         // Bottom-left soft circle
         drawCircle(
-            color = LoginColors.DecorativeCircle,
+            color = ShopDecorativeCircle,
             radius = width * 0.58f,
             center = Offset(width * 0.18f, height * 0.95f)
         )
@@ -285,21 +254,20 @@ private fun LoginHeader() {
                 .background(Color.Transparent),
             contentAlignment = Alignment.Center
         ) {
-            // Placeholder Icon (Can be replaced with Image(painterResource(R.drawable.your_logo), ...))
             ShoppingCartLogoIcon(
                 modifier = Modifier.size(90.dp),
-                tint = LoginColors.PrimaryRed
+                tint = MaterialTheme.colorScheme.primary
             )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // "OnlineShop" styled text
+        // "OnlineShop" styled text using typography & theme colors
         Text(
             text = buildAnnotatedString {
                 withStyle(
                     style = SpanStyle(
-                        color = LoginColors.PrimaryRed,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 32.sp
                     )
@@ -308,14 +276,15 @@ private fun LoginHeader() {
                 }
                 withStyle(
                     style = SpanStyle(
-                        color = Color(0xFF1C2238),
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
                         fontSize = 32.sp
                     )
                 ) {
                     append("Shop")
                 }
-            }
+            },
+            style = MaterialTheme.typography.headlineLarge
         )
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -325,7 +294,7 @@ private fun LoginHeader() {
             text = buildAnnotatedString {
                 withStyle(
                     style = SpanStyle(
-                        color = LoginColors.DarkText,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
                     )
@@ -334,7 +303,7 @@ private fun LoginHeader() {
                 }
                 withStyle(
                     style = SpanStyle(
-                        color = LoginColors.PrimaryRed,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
                     )
@@ -342,6 +311,7 @@ private fun LoginHeader() {
                     append("آنلاین شاپ")
                 }
             },
+            style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center
         )
     }
@@ -353,6 +323,7 @@ private fun LoginHeader() {
 @Composable
 private fun EmailStepContent(
     email: String,
+    isSubmitEnabled: Boolean,
     onEmailChange: (String) -> Unit,
     onSubmit: () -> Unit
 ) {
@@ -364,8 +335,7 @@ private fun EmailStepContent(
         Text(
             text = "جهت ورود به فروشگاه اینترنتی آنلاین شاپ ایمیل خود را در کادر زیر وارد کرده و کد ارسالی به ایمیل خود را در مرحله بعد وارد کنید.",
             style = MaterialTheme.typography.bodyMedium.copy(
-                color = LoginColors.SecondaryText,
-                fontSize = 14.sp,
+                color = ShopSecondaryText,
                 lineHeight = 22.sp,
                 textAlign = TextAlign.Start
             ),
@@ -378,9 +348,8 @@ private fun EmailStepContent(
         Text(
             text = "ایمیل:",
             style = MaterialTheme.typography.titleMedium.copy(
-                color = LoginColors.DarkText,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold
             )
         )
 
@@ -402,7 +371,7 @@ private fun EmailStepContent(
         PrimaryButton(
             text = "تأیید و ادامه",
             onClick = onSubmit,
-            enabled = email.isNotBlank()
+            enabled = isSubmitEnabled
         )
     }
 }
@@ -414,6 +383,7 @@ private fun EmailStepContent(
 private fun VerificationCodeStepContent(
     email: String,
     code: String,
+    isSubmitEnabled: Boolean,
     onCodeChange: (String) -> Unit,
     isError: Boolean,
     timerText: String,
@@ -429,9 +399,8 @@ private fun VerificationCodeStepContent(
         Text(
             text = "کد تأیید:",
             style = MaterialTheme.typography.titleMedium.copy(
-                color = LoginColors.DarkText,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold
             )
         )
 
@@ -441,8 +410,7 @@ private fun VerificationCodeStepContent(
         Text(
             text = "کد ۴ رقمی ارسال شده به $email خود را وارد کنید",
             style = MaterialTheme.typography.bodyMedium.copy(
-                color = LoginColors.SecondaryText,
-                fontSize = 13.sp,
+                color = ShopSecondaryText,
                 lineHeight = 20.sp
             )
         )
@@ -463,29 +431,31 @@ private fun VerificationCodeStepContent(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(LoginColors.TimerBg)
+                        .background(ShopTimerBg)
                         .padding(horizontal = 14.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = timerText,
-                        color = LoginColors.DarkText,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     )
                 }
             }
         )
 
-        // Error message if code is incorrect (as shown in Image 3)
+        // Error message if code is incorrect
         AnimatedVisibility(visible = isError) {
             Column {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "کد وارد شده اشتباه است",
-                    color = LoginColors.ErrorRed,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Medium
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Start
                 )
@@ -498,7 +468,7 @@ private fun VerificationCodeStepContent(
         PrimaryButton(
             text = "تأیید و ادامه",
             onClick = onSubmit,
-            enabled = code.isNotBlank()
+            enabled = isSubmitEnabled
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -509,30 +479,30 @@ private fun VerificationCodeStepContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // "ویرایش ایمیل"
             Text(
                 text = "ویرایش ایمیل",
-                color = LoginColors.DarkText,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Medium
+                ),
                 modifier = Modifier.clickable { onEditEmail() }
             )
 
-            // "ارسال مجدد کد" with arrow
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.clickable { onResendCode() }
             ) {
                 Text(
                     text = "ارسال مجدد کد",
-                    color = LoginColors.DarkText,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Medium
+                    )
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 ArrowLeftIcon(
                     modifier = Modifier.size(16.dp),
-                    tint = LoginColors.DarkText
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
@@ -545,6 +515,7 @@ private fun VerificationCodeStepContent(
 @Composable
 private fun UserInfoStepContent(
     fullName: String,
+    isSubmitEnabled: Boolean,
     onFullNameChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onSkip: () -> Unit
@@ -557,9 +528,8 @@ private fun UserInfoStepContent(
         Text(
             text = "اطلاعات کاربری:",
             style = MaterialTheme.typography.titleMedium.copy(
-                color = LoginColors.DarkText,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold
             )
         )
 
@@ -581,7 +551,7 @@ private fun UserInfoStepContent(
         PrimaryButton(
             text = "ثبت اطلاعات",
             onClick = onSubmit,
-            enabled = fullName.isNotBlank()
+            enabled = isSubmitEnabled
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -589,9 +559,10 @@ private fun UserInfoStepContent(
         // "عبور از این مرحله" link
         Text(
             text = "عبور از این مرحله",
-            color = LoginColors.DarkText,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Medium
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onSkip() },
@@ -616,9 +587,9 @@ private fun CustomTextField(
     leadingContent: (@Composable () -> Unit)? = null
 ) {
     val borderModifier = if (isError) {
-        Modifier.border(1.5.dp, LoginColors.ErrorRed, RoundedCornerShape(14.dp))
+        Modifier.border(1.5.dp, MaterialTheme.colorScheme.error, RoundedCornerShape(14.dp))
     } else {
-        Modifier.border(1.dp, LoginColors.TextFieldBorder, RoundedCornerShape(14.dp))
+        Modifier.border(1.dp, ShopTextFieldBorder, RoundedCornerShape(14.dp))
     }
 
     Box(
@@ -631,7 +602,7 @@ private fun CustomTextField(
                 clip = false
             )
             .clip(RoundedCornerShape(14.dp))
-            .background(LoginColors.TextFieldBg)
+            .background(MaterialTheme.colorScheme.surface)
             .then(borderModifier)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart
@@ -641,7 +612,6 @@ private fun CustomTextField(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Input Text Box
             Box(
                 modifier = Modifier.weight(1f),
                 contentAlignment = Alignment.CenterStart
@@ -649,8 +619,9 @@ private fun CustomTextField(
                 if (value.isEmpty()) {
                     Text(
                         text = placeholder,
-                        color = LoginColors.Placeholder,
-                        fontSize = 14.sp
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            color = ShopPlaceholder
+                        )
                     )
                 }
 
@@ -659,8 +630,7 @@ private fun CustomTextField(
                     onValueChange = onValueChange,
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = LoginColors.DarkText,
-                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Start
                     ),
                     keyboardOptions = KeyboardOptions(
@@ -675,7 +645,6 @@ private fun CustomTextField(
                 )
             }
 
-            // Optional Leading/Trailing content inside text field (like Timer)
             if (leadingContent != null) {
                 Spacer(modifier = Modifier.width(8.dp))
                 leadingContent()
@@ -685,7 +654,7 @@ private fun CustomTextField(
 }
 
 /**
- * Reusable Vibrant Primary Action Button
+ * Reusable Vibrant Primary Action Button using theme primary colors
  */
 @Composable
 private fun PrimaryButton(
@@ -696,11 +665,11 @@ private fun PrimaryButton(
 ) {
     val gradientBrush = Brush.horizontalGradient(
         colors = if (enabled) listOf(
-            LoginColors.PrimaryRed,
-            LoginColors.PrimaryRedGradient
+            MaterialTheme.colorScheme.primary,
+            ShopPrimaryRedGradient
         ) else listOf(
-            LoginColors.PrimaryRed.copy(alpha = 0.5f),
-            LoginColors.PrimaryRedGradient.copy(alpha = 0.5f)
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+            ShopPrimaryRedGradient.copy(alpha = 0.5f)
         )
     )
 
@@ -730,16 +699,18 @@ private fun PrimaryButton(
         ) {
             Text(
                 text = text,
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.labelLarge.copy(
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
             )
         }
     }
 }
 
 /**
- * Loading Dialog ("لطفا صبر کنید") shown during API verification
+ * Loading Dialog ("لطفا صبر کنید")
  */
 @Composable
 private fun PleaseWaitDialog() {
@@ -752,7 +723,7 @@ private fun PleaseWaitDialog() {
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             modifier = Modifier
                 .shadow(8.dp, RoundedCornerShape(16.dp))
                 .padding(4.dp)
@@ -766,9 +737,8 @@ private fun PleaseWaitDialog() {
                 Text(
                     text = "لطفا صبر کنید",
                     style = MaterialTheme.typography.titleMedium.copy(
-                        color = LoginColors.DarkText,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
                     )
                 )
 
@@ -776,7 +746,7 @@ private fun PleaseWaitDialog() {
 
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     strokeWidth = 2.5.dp
                 )
             }
@@ -785,18 +755,17 @@ private fun PleaseWaitDialog() {
 }
 
 /**
- * Placeholder Vector Icon for Shopping Cart / Brand Logo
+ * Shopping Cart Logo Icon Placeholder
  */
 @Composable
 private fun ShoppingCartLogoIcon(
     modifier: Modifier = Modifier,
-    tint: Color = LoginColors.PrimaryRed
+    tint: Color = MaterialTheme.colorScheme.primary
 ) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
 
-        // Shopping cart body path
         val path = Path().apply {
             moveTo(w * 0.15f, h * 0.25f)
             lineTo(w * 0.3f, h * 0.25f)
@@ -810,7 +779,6 @@ private fun ShoppingCartLogoIcon(
             color = tint,
             style = Stroke(width = w * 0.07f, cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
-        // Wheels
         drawCircle(
             color = tint,
             radius = w * 0.07f,
@@ -825,19 +793,18 @@ private fun ShoppingCartLogoIcon(
 }
 
 /**
- * Vector Icon for Left Arrow (RTL back navigation)
+ * Left Arrow Icon for RTL back navigation
  */
 @Composable
 private fun ArrowLeftIcon(
     modifier: Modifier = Modifier,
-    tint: Color = LoginColors.DarkText
+    tint: Color = MaterialTheme.colorScheme.onBackground
 ) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
         val strokeWidth = w * 0.14f
 
-        // Line
         drawLine(
             color = tint,
             start = Offset(w * 0.85f, h * 0.5f),
@@ -845,7 +812,6 @@ private fun ArrowLeftIcon(
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
-        // Arrow head pointing left
         val path = Path().apply {
             moveTo(w * 0.45f, h * 0.2f)
             lineTo(w * 0.15f, h * 0.5f)
@@ -859,28 +825,3 @@ private fun ArrowLeftIcon(
     }
 }
 
-/**
- * Formats countdown seconds to MM:SS string with Persian digits
- */
-private fun formatTimer(totalSeconds: Int): String {
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    val rawString = String.format(Locale.US, "%02d:%02d", minutes, seconds)
-    return rawString.toPersianDigits()
-}
-
-/**
- * Converts Western digits to Persian digits
- */
-private fun String.toPersianDigits(): String {
-    val persianDigits = charArrayOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
-    return this.map { char ->
-        if (char in '0'..'9') persianDigits[char - '0'] else char
-    }.joinToString("")
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LoginScreenPreview() {
-    LoginScreen()
-}
