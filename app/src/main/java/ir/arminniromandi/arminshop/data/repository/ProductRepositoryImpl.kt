@@ -13,19 +13,40 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+import ir.arminniromandi.arminshop.data.mock.MockProducts
+
 class ProductRepositoryImpl @Inject constructor(
     private val productDao: ProductDao
 ) : ProductRepository {
 
     override fun getProducts(): Flow<List<Product>> {
         return productDao.getProductsWithComments().map { list ->
-            list.map { it.toDomain() }
+            if (list.isEmpty()) {
+                MockProducts.sampleProducts
+            } else {
+                list.map { it.toDomain() }
+            }
         }
     }
 
     override fun getProductById(productId: Int): Flow<Product?> {
         return productDao.getProductWithCommentsById(productId).map {
-            it?.toDomain()
+            it?.toDomain() ?: MockProducts.sampleProducts.find { p -> p.id == productId }
+        }
+    }
+
+    override fun searchProducts(query: String): Flow<List<Product>> {
+        val trimmedQuery = query.trim()
+        return productDao.searchProductsWithComments(trimmedQuery).map { list ->
+            val dbResults = list.map { it.toDomain() }
+            if (dbResults.isEmpty()) {
+                MockProducts.sampleProducts.filter { product ->
+                    product.name.contains(trimmedQuery, ignoreCase = true) ||
+                            product.description.contains(trimmedQuery, ignoreCase = true)
+                }
+            } else {
+                dbResults
+            }
         }
     }
 

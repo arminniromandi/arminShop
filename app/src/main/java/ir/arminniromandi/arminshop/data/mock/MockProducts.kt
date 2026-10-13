@@ -10,6 +10,40 @@ object MockProducts {
 
     val sampleProducts: List<Product> = listOf(
         Product(
+            id = 101,
+            imageRes = R.drawable.malecloth2,
+            name = "مانتو بافت زنانه اچ اند ام",
+            description = "مانتو بافت زنانه شیک و با کیفیت عالی، مناسب فصل پاییز و زمستان.",
+            features = ProductFeatures(
+                weight = "۳۵۰ گرم",
+                color = "چهارخانه سرمه‌ای"
+            ),
+            mainPrice = 2000000L,
+            finalPrice = 1550000L,
+            discountPrec = 10,
+            rating = 4.8f,
+            reviewsCount = 18,
+            comments = emptyList(),
+            category = ProductCategory.WOMEN
+        ),
+        Product(
+            id = 102,
+            imageRes = R.drawable.womanshirt,
+            name = "مانتو زنانه پروت",
+            description = "مانتو زنانه طرح‌دار بسیار شیک و با طراحی سنتی زیبا.",
+            features = ProductFeatures(
+                weight = "۳۰۰ گرم",
+                color = "کرم"
+            ),
+            mainPrice = 6300000L,
+            finalPrice = 5760000L,
+            discountPrec = 0,
+            rating = 4.6f,
+            reviewsCount = 12,
+            comments = emptyList(),
+            category = ProductCategory.WOMEN
+        ),
+        Product(
             id = 1,
             imageRes = R.drawable.malecloth,
             name = "پیراهن مردانه اسپرت",

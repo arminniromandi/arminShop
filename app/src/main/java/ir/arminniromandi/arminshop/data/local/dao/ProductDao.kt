@@ -21,6 +21,10 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE id = :productId")
     fun getProductWithCommentsById(productId: Int): Flow<ProductWithComments?>
 
+    @Transaction
+    @Query("SELECT * FROM products WHERE name LIKE '%' || :query || '%' ")
+    fun searchProductsWithComments(query: String): Flow<List<ProductWithComments>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertProducts(products: List<ProductEntity>): List<Long>
 

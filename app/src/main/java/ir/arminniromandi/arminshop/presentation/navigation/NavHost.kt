@@ -10,9 +10,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import ir.arminniromandi.arminshop.presentation.ui.screens.HomeScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.LoginScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.SearchScreen
 
 
 @Composable
@@ -21,15 +25,13 @@ fun MainNavHost(
     innerPadding: PaddingValues,
 ) {
 
-    //todo Impliment login first
-
     NavHost(
         modifier = Modifier.padding(innerPadding),
         navController = navController,
         startDestination = ScreensRoute.Home.route,
         enterTransition = {
             slideInHorizontally(animationSpec = tween(500)) + fadeIn(
-                animationSpec = tween(150)
+                animationSpec = tween(150),
             )
         },
         exitTransition = {
@@ -41,8 +43,21 @@ fun MainNavHost(
         },
 
     ) {
+        composable(ScreensRoute.Login.route) {
+            LoginScreen(
+                onLoginSuccess = {
+                    navController.navigate(ScreensRoute.Home.route) {
+                        popUpTo(ScreensRoute.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(ScreensRoute.Home.route) {
-            HomeScreen()
+            HomeScreen(
+                onSearch = { query ->
+                    navController.navigate(ScreensRoute.Search.createRoute(query))
+                }
+            )
         }
         composable(ScreensRoute.Categories.route) {
             HomeScreen()
@@ -53,9 +68,21 @@ fun MainNavHost(
         composable(ScreensRoute.Profile.route) {
             HomeScreen()
         }
+        composable(
+            route = ScreensRoute.Search.route,
+            arguments = listOf(
+                navArgument("query") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) {
+            SearchScreen()
+        }
 
     }
 }
+
 
 
 

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ir.arminniromandi.arminshop.domain.repository.UserRepository
 import ir.arminniromandi.arminshop.domain.usecase.ValidateEmailUseCase
+import ir.arminniromandi.arminshop.domain.usecase.VerifyCodeUseCase
 import ir.arminniromandi.arminshop.presentation.ui.screens.LoginStep
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -45,7 +46,8 @@ data class LoginUiState(
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val userRepository: UserRepository,
-    private val validateEmailUseCase: ValidateEmailUseCase
+    private val validateEmailUseCase: ValidateEmailUseCase,
+    private val verifyCodeUseCase: VerifyCodeUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -116,13 +118,10 @@ class LoginViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            delay(1500L)
-            if ((code == "1234") || (code == "0000")) {
-                stopTimer()
-                // Save email and login state to DataStore when verification code is successfully verified
-                userRepository.saveEmail(currentEmail)
-                userRepository.saveLoginState(true)
+            delay(1500L) // Simulate network request
 
+            if (verifyCodeUseCase(email = currentEmail, code = code)) {
+                stopTimer()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
