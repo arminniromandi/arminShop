@@ -14,6 +14,14 @@ val ShopErrorRed = Color(0xFFD32F2F)
 val ShopTimerBg = Color(0xFFF3ECE4)
 val ShopPlaceholder = Color(0xFF9E9E9E)
 
+
+val PrimaryOrangeRed = Color(0xFFFA4A23)
+val ScreenBackground = Color(0xFFFFF6EE)
+val TextDarkColor = Color(0xFF1E1E1E)
+val TextGrayColor = Color(0xFF888888)
+val CardBgSlate = Color(0xFFE5E9EE)
+
+
 // Legacy colors
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)

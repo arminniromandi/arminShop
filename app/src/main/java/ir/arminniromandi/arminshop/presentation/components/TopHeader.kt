@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,7 +33,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import ir.arminniromandi.arminshop.R
 
-
 /**
  * Custom Header according to design specs:
  * Left side: Back arrow, ecommerce_logo.png, texr_online_shop.png
@@ -44,7 +44,8 @@ fun ShopHeader(
     onBackClick: (() -> Unit)? = null,
     onProfileClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
-    onMenuClick: () -> Unit = {}
+    onMenuClick: () -> Unit = {},
+    isDrawerOpen: Boolean = false
 ) {
     Surface(
         modifier = modifier
@@ -65,21 +66,22 @@ fun ShopHeader(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     if (onBackClick != null) {
-
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            modifier = Modifier.size(40.dp).clickable{
-                                onBackClick
-                            }
-                        )
+                        IconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
-
 
                     Image(
                         painter = painterResource(id = R.drawable.top_logo),
                         contentDescription = "Ecommerce Logo",
-                        modifier = Modifier.size(50.dp),
+                        modifier = Modifier.size(40.dp),
                         contentScale = ContentScale.Crop
                     )
 
@@ -93,7 +95,7 @@ fun ShopHeader(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Right section: Profile Avatar, Notification Icon, Hamburger Menu
+                // Right section: Profile Avatar, Notification Icon, Hamburger Menu / Close Icon
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -128,14 +130,14 @@ fun ShopHeader(
                         )
                     }
 
-                    // Hamburger Menu Icon
+                    // Hamburger Menu / Close Icon
                     IconButton(
                         onClick = onMenuClick,
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Menu",
+                            imageVector = if (isDrawerOpen) Icons.Default.Close else Icons.Default.Menu,
+                            contentDescription = if (isDrawerOpen) "Close Menu" else "Menu",
                             tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(24.dp)
                         )
@@ -153,4 +155,3 @@ private fun ShopHeaderPreview() {
         onBackClick = {}
     )
 }
-

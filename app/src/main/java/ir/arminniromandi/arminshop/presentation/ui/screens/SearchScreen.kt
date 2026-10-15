@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,17 +36,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.domain.model.Product
-import ir.arminniromandi.arminshop.presentation.ui.theme.IranSansFontFamily
 import ir.arminniromandi.arminshop.presentation.viewmodels.SearchViewModel
 
 private val ScreenBackground = Color(0xFFFFF6EE)
@@ -57,7 +54,8 @@ private val TextGrayColor = Color(0xFF888888)
 fun SearchScreen(
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel(),
-    onProductClick: (Product) -> Unit = {}
+    onProductClick: (Product) -> Unit = {},
+    onAddToCart: (Product) -> Unit = {}
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val products by viewModel.searchResults.collectAsStateWithLifecycle()
@@ -68,7 +66,8 @@ fun SearchScreen(
         products = products,
         onQueryChange = viewModel::onQueryChange,
         onClearQuery = viewModel::clearQuery,
-        onProductClick = onProductClick
+        onProductClick = onProductClick,
+        onAddToCart = onAddToCart
     )
 }
 
@@ -79,7 +78,8 @@ fun SearchScreenContent(
     products: List<Product>,
     onQueryChange: (String) -> Unit,
     onClearQuery: () -> Unit,
-    onProductClick: (Product) -> Unit
+    onProductClick: (Product) -> Unit,
+    onAddToCart: (Product) -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -120,23 +120,13 @@ fun SearchScreenContent(
                         if (query.isEmpty()) {
                             Text(
                                 text = "نام محصول را وارد کنید ...",
-                                style = TextStyle(
-                                    fontFamily = IranSansFontFamily,
-                                    fontWeight = FontWeight.Normal,
-                                    fontSize = 13.sp,
-                                    color = Color(0xFF9E9E9E)
-                                )
+                                style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF9E9E9E))
                             )
                         }
                         BasicTextField(
                             value = query,
                             onValueChange = onQueryChange,
-                            textStyle = TextStyle(
-                                fontFamily = IranSansFontFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp,
-                                color = TextDarkColor
-                            ),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = TextDarkColor),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(
@@ -167,23 +157,13 @@ fun SearchScreenContent(
             if (query.isNotBlank()) {
                 Text(
                     text = "نتایج جستجو برای: «$query» (${formatPersianPrice(products.size.toLong())} محصول)",
-                    style = TextStyle(
-                        fontFamily = IranSansFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = TextDarkColor
-                    ),
+                    style = MaterialTheme.typography.titleMedium.copy(color = TextDarkColor),
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
                 Text(
                     text = "همه محصولات",
-                    style = TextStyle(
-                        fontFamily = IranSansFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = TextDarkColor
-                    ),
+                    style = MaterialTheme.typography.titleMedium.copy(color = TextDarkColor),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -198,12 +178,7 @@ fun SearchScreenContent(
                 ) {
                     Text(
                         text = "هیچ محصولی با این مشخصات یافت نشد.",
-                        style = TextStyle(
-                            fontFamily = IranSansFontFamily,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 15.sp,
-                            color = TextGrayColor
-                        ),
+                        style = MaterialTheme.typography.bodyLarge.copy(color = TextGrayColor),
                         textAlign = TextAlign.Center
                     )
                 }
@@ -219,6 +194,7 @@ fun SearchScreenContent(
                         ProductItemCard(
                             product = product,
                             onClick = { onProductClick(product) },
+                            onAddToCartClick = onAddToCart,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

@@ -14,17 +14,20 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import ir.arminniromandi.arminshop.presentation.ui.screens.CartScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.CategoryScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.HomeScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.LoginScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.ProductDetailScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.SearchScreen
-
+import ir.arminniromandi.arminshop.presentation.viewmodels.CartSharedViewModel
 
 @Composable
 fun MainNavHost(
     navController: NavHostController,
     innerPadding: PaddingValues,
+    cartViewModel: CartSharedViewModel
 ) {
-
     NavHost(
         modifier = Modifier.padding(innerPadding),
         navController = navController,
@@ -36,12 +39,9 @@ fun MainNavHost(
         },
         exitTransition = {
             slideOutHorizontally(
-                animationSpec = tween(
-                    500
-                )
+                animationSpec = tween(500)
             ) + fadeOut(animationSpec = tween(150))
         },
-
     ) {
         composable(ScreensRoute.Login.route) {
             LoginScreen(
@@ -56,17 +56,53 @@ fun MainNavHost(
             HomeScreen(
                 onSearch = { query ->
                     navController.navigate(ScreensRoute.Search.createRoute(query))
+                },
+                onProductClick = { product ->
+                    navController.navigate(ScreensRoute.ProductDetail.createRoute(product.id))
+                },
+                onAddToCart = { product ->
+                    cartViewModel.addToCart(product)
                 }
             )
         }
         composable(ScreensRoute.Categories.route) {
-            HomeScreen()
+            CategoryScreen()
         }
         composable(ScreensRoute.Cart.route) {
-            HomeScreen()
+            CartScreen(
+                viewModel = cartViewModel,
+                onNavigateToHome = {
+                    navController.navigate(ScreensRoute.Home.route)
+                }
+            )
         }
         composable(ScreensRoute.Profile.route) {
-            HomeScreen()
+            HomeScreen(
+                onProductClick = { product ->
+                    navController.navigate(ScreensRoute.ProductDetail.createRoute(product.id))
+                },
+                onAddToCart = { product ->
+                    cartViewModel.addToCart(product)
+                }
+            )
+        }
+        composable(
+            route = ScreensRoute.ProductDetail.route,
+            arguments = listOf(
+                navArgument("productId") {
+                    type = NavType.IntType
+                    defaultValue = 1
+                }
+            )
+        ) {
+            ProductDetailScreen(
+                onProductClick = { product ->
+                    navController.navigate(ScreensRoute.ProductDetail.createRoute(product.id))
+                },
+                onAddToCart = { product ->
+                    cartViewModel.addToCart(product)
+                }
+            )
         }
         composable(
             route = ScreensRoute.Search.route,
@@ -77,12 +113,14 @@ fun MainNavHost(
                 }
             )
         ) {
-            SearchScreen()
+            SearchScreen(
+                onProductClick = { product ->
+                    navController.navigate(ScreensRoute.ProductDetail.createRoute(product.id))
+                },
+                onAddToCart = { product ->
+                    cartViewModel.addToCart(product)
+                }
+            )
         }
-
     }
 }
-
-
-
-

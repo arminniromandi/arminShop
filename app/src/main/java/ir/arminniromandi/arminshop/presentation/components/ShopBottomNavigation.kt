@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -46,24 +47,20 @@ import ir.arminniromandi.arminshop.presentation.ui.theme.ArminShopTheme
 import ir.arminniromandi.arminshop.presentation.ui.theme.ShopSecondaryText
 
 /**
- * Bottom navigation bar items
- */
-
-
-/**
- * Custom Animated Bottom Navigation Bar with smooth sliding top indicator line.
+ * Custom Animated Bottom Navigation Bar with smooth sliding top indicator line and Cart Badge count.
  *
  * @param selectedItem Currently selected [BottomNavItem]
  * @param onItemSelected Callback when an item is selected
- * @param iconContent Custom composable for rendering item icons (use painterResource / Image / Icon here)
+ * @param cartBadgeCount Total count of items in cart to show on the CART tab icon badge
+ * @param iconContent Custom composable for rendering item icons
  */
 @Composable
 fun ShopBottomNavigation(
     selectedItem: BottomNavItem,
     onItemSelected: (BottomNavItem) -> Unit,
     modifier: Modifier = Modifier,
+    cartBadgeCount: Int = 0,
     iconContent: @Composable (item: BottomNavItem, isSelected: Boolean, tint: Color) -> Unit = { _, isSelected, tint ->
-        // Placeholder box icon for user to easily replace with painterResource(R.drawable.my_icon)
         Box(
             modifier = Modifier
                 .size(24.dp)
@@ -141,12 +138,39 @@ fun ShopBottomNavigation(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            // Custom Icon Slot
-                            iconContent(
-                                item,
-                                isSelected,
-                                if (isSelected) activeColor else inactiveColor
-                            )
+                            // Icon Slot with Badge overlay for Cart item
+                            Box(contentAlignment = Alignment.TopEnd) {
+                                iconContent(
+                                    item,
+                                    isSelected,
+                                    if (isSelected) activeColor else inactiveColor
+                                )
+
+                                if (item == BottomNavItem.CART && cartBadgeCount > 0) {
+                                    Surface(
+                                        modifier = Modifier
+                                            .offset(x = 6.dp, y = (-4).dp)
+                                            .size(if (cartBadgeCount > 9) 18.dp else 16.dp),
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primary
+                                    ) {
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier = Modifier.fillMaxSize()
+                                        ) {
+                                            Text(
+                                                text = formatPersianBadge(cartBadgeCount),
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    color = Color.White,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
 
                             Spacer(modifier = Modifier.height(4.dp))
 
@@ -168,6 +192,13 @@ fun ShopBottomNavigation(
     }
 }
 
+private fun formatPersianBadge(count: Int): String {
+    val formatted = count.toString()
+    val persianDigits = charArrayOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
+    return formatted.map { char ->
+        if (char in '0'..'9') persianDigits[char - '0'] else char
+    }.joinToString("")
+}
 
 @Preview(showBackground = true)
 @Composable
@@ -183,7 +214,8 @@ fun ShopBottomNavigationPreview() {
         ) {
             ShopBottomNavigation(
                 selectedItem = selectedItem,
-                onItemSelected = { selectedItem = it }
+                onItemSelected = { selectedItem = it },
+                cartBadgeCount = 3
             )
         }
     }

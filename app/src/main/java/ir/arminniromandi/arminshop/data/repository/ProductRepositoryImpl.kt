@@ -3,6 +3,7 @@ package ir.arminniromandi.arminshop.data.repository
 import ir.arminniromandi.arminshop.data.local.dao.ProductDao
 import ir.arminniromandi.arminshop.data.mapper.toDomain
 import ir.arminniromandi.arminshop.data.mapper.toEntity
+import ir.arminniromandi.arminshop.data.mock.MockProducts
 import ir.arminniromandi.arminshop.domain.model.Product
 import ir.arminniromandi.arminshop.domain.model.ProductComment
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
@@ -12,8 +13,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
-
-import ir.arminniromandi.arminshop.data.mock.MockProducts
 
 class ProductRepositoryImpl @Inject constructor(
     private val productDao: ProductDao
@@ -50,18 +49,32 @@ class ProductRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun addComment(productId: Int, comment: ProductComment) = withContext(Dispatchers.IO) {
-        val currentProduct = productDao.getProductWithCommentsById(productId).firstOrNull()?.toDomain()
+    override suspend fun addComment(productId: Int, comment: ProductComment): Unit = withContext(Dispatchers.IO) {
+        val existingDbProduct = productDao.getProductWithCommentsById(productId).firstOrNull()
+        if (existingDbProduct == null) {
+            val mockProduct = MockProducts.sampleProducts.find { it.id == productId }
+            if (mockProduct != null) {
+                productDao.insertProducts(listOf(mockProduct.toEntity()))
+            }
+        }
 
+        // Insert new comment
         productDao.insertComment(comment.toEntity(productId))
 
-        if (currentProduct != null) {
-            val newCount = currentProduct.reviewsCount + 1
-            val newRating = ((currentProduct.rating * currentProduct.reviewsCount) + comment.rating) / newCount
+        // Recalculate average rating and total review count from Room DB
+        val updatedProductWithComments = productDao.getProductWithCommentsById(productId).firstOrNull()
+        if (updatedProductWithComments != null) {
+            val comments = updatedProductWithComments.comments
+            val count = comments.size
+            val avgRating = if (count > 0) {
+                (comments.sumOf { it.rating.toDouble() } / count).toFloat()
+            } else {
+                0f
+            }
             productDao.updateProductRatingAndReviewCount(
                 productId = productId,
-                newRating = newRating,
-                newReviewsCount = newCount
+                newRating = avgRating,
+                newReviewsCount = count
             )
         }
     }
