@@ -25,6 +25,10 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE name LIKE '%' || :query || '%' ")
     fun searchProductsWithComments(query: String): Flow<List<ProductWithComments>>
 
+    @Transaction
+    @Query("SELECT * FROM products WHERE (category = :categoryEnumName OR category = :categoryTitle) AND (name LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%')")
+    fun getProductsByCategoryAndQuery(categoryEnumName: String, categoryTitle: String, query: String): Flow<List<ProductWithComments>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertProducts(products: List<ProductEntity>): List<Long>
 

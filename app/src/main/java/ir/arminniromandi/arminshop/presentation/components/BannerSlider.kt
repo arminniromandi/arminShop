@@ -78,8 +78,8 @@ fun BannerSlider(
                     painter = painterResource(id = R.drawable.discountbaner),
                     contentDescription = "Discount Badge",
                     modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding( start = 18.dp)
+                        .align(Alignment.TopEnd)
+                        .padding( end = 18.dp)
                         .offset(y = (-2).dp)
                         .height(32.dp),
                     contentScale = ContentScale.Fit
@@ -145,7 +145,7 @@ fun BannerSlider(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, locale = "fa")
 @Composable
 private fun BannerSliderPreview() {
     BannerSlider()

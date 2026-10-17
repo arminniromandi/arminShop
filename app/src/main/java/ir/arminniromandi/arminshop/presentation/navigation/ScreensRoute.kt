@@ -12,6 +12,9 @@ sealed class ScreensRoute(val route: String) {
     data object ProductDetail : ScreensRoute("product_detail/{productId}") {
         fun createRoute(productId: Int): String = "product_detail/$productId"
     }
+    data object CategoryProducts : ScreensRoute("category_products/{categoryId}") {
+        fun createRoute(categoryId: String): String = "category_products/$categoryId"
+    }
     data object Search : ScreensRoute("search?query={query}") {
         fun createRoute(query: String = ""): String {
             val encodedQuery = try {

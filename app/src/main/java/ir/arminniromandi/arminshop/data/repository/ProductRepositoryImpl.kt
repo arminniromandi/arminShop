@@ -5,8 +5,10 @@ import ir.arminniromandi.arminshop.data.mapper.toDomain
 import ir.arminniromandi.arminshop.data.mapper.toEntity
 import ir.arminniromandi.arminshop.data.mock.MockProducts
 import ir.arminniromandi.arminshop.domain.model.Product
+import ir.arminniromandi.arminshop.domain.model.ProductCategory
 import ir.arminniromandi.arminshop.domain.model.ProductComment
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
+import ir.arminniromandi.arminshop.utils.Constance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
@@ -42,6 +44,31 @@ class ProductRepositoryImpl @Inject constructor(
                 MockProducts.sampleProducts.filter { product ->
                     product.name.contains(trimmedQuery, ignoreCase = true) ||
                             product.description.contains(trimmedQuery, ignoreCase = true)
+                }
+            } else {
+                dbResults
+            }
+        }
+    }
+
+    override fun getProductsByCategory(categoryId: String, query: String): Flow<List<Product>> {
+        val categoryItem = Constance.categories.find { it.id == categoryId || it.name == categoryId }
+        val categoryTitle = categoryItem?.name ?: categoryId
+        val categoryEnumName = ProductCategory.entries.find {
+            it.name.equals(categoryId, ignoreCase = true) || it.title == categoryTitle
+        }?.name ?: categoryTitle
+
+        val trimmedQuery = query.trim()
+        return productDao.getProductsByCategoryAndQuery(categoryEnumName, categoryTitle, trimmedQuery).map { list ->
+            val dbResults = list.map { it.toDomain() }
+            if (dbResults.isEmpty()) {
+                MockProducts.sampleProducts.filter { product ->
+                    val matchesCategory = product.category.name.equals(categoryEnumName, ignoreCase = true) ||
+                            product.category.title == categoryTitle
+                    val matchesQuery = trimmedQuery.isBlank() ||
+                            product.name.contains(trimmedQuery, ignoreCase = true) ||
+                            product.description.contains(trimmedQuery, ignoreCase = true)
+                    matchesCategory && matchesQuery
                 }
             } else {
                 dbResults

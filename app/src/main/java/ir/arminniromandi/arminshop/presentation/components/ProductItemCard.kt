@@ -35,9 +35,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import ir.arminniromandi.arminshop.data.mock.MockProducts
 import ir.arminniromandi.arminshop.domain.model.Product
+import ir.arminniromandi.arminshop.presentation.ui.theme.ArminShopTheme
 import ir.arminniromandi.arminshop.presentation.ui.theme.CardBgSlate
 import ir.arminniromandi.arminshop.presentation.ui.theme.PrimaryOrangeRed
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextDarkColor
@@ -112,7 +115,7 @@ fun ProductItemCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 10.dp, bottom = 10.dp, end = 10.dp, start = 28.dp),
+                        .padding(top = 10.dp, bottom = 10.dp, end = 10.dp, start = 10.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
@@ -122,7 +125,7 @@ fun ProductItemCard(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -189,4 +192,16 @@ fun formatPersianPrice(price: Long): String {
     return formatted.map { char ->
         if (char in '0'..'9') persianDigits[char - '0'] else char
     }.joinToString("")
+}
+
+@Preview(showBackground = true, locale = "fa")
+@Composable
+private fun ProductItemCardPreview() {
+    ArminShopTheme {
+        ProductItemCard(
+            product = MockProducts.sampleProducts.first(),
+            onClick = {},
+            onAddToCartClick = {}
+        )
+    }
 }

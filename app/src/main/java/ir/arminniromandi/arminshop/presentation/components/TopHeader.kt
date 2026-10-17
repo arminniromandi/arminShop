@@ -74,6 +74,7 @@ fun ShopHeader(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
+                                tint = Color.Black,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -139,7 +140,7 @@ fun ShopHeader(
                         Icon(
                             imageVector = if (isDrawerOpen) Icons.Default.Close else Icons.Default.Menu,
                             contentDescription = if (isDrawerOpen) "Close Menu" else "Menu",
-                            tint = MaterialTheme.colorScheme.onSurface,
+                            tint = Color.Black,
                             modifier = Modifier.size(24.dp)
                         )
                     }

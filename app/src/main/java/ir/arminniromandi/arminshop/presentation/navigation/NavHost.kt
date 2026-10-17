@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import ir.arminniromandi.arminshop.presentation.ui.screens.CartScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.CategoryProductsScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.CategoryScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.HomeScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.LoginScreen
@@ -60,13 +61,20 @@ fun MainNavHost(
                 onProductClick = { product ->
                     navController.navigate(ScreensRoute.ProductDetail.createRoute(product.id))
                 },
+                onCategoryClick = { categoryId ->
+                    navController.navigate(ScreensRoute.CategoryProducts.createRoute(categoryId))
+                },
                 onAddToCart = { product ->
                     cartViewModel.addToCart(product)
                 }
             )
         }
         composable(ScreensRoute.Categories.route) {
-            CategoryScreen()
+            CategoryScreen(
+                onCategoryClick = { categoryId ->
+                    navController.navigate(ScreensRoute.CategoryProducts.createRoute(categoryId))
+                }
+            )
         }
         composable(ScreensRoute.Cart.route) {
             CartScreen(
@@ -114,6 +122,24 @@ fun MainNavHost(
             )
         ) {
             SearchScreen(
+                onProductClick = { product ->
+                    navController.navigate(ScreensRoute.ProductDetail.createRoute(product.id))
+                },
+                onAddToCart = { product ->
+                    cartViewModel.addToCart(product)
+                }
+            )
+        }
+        composable(
+            route = ScreensRoute.CategoryProducts.route,
+            arguments = listOf(
+                navArgument("categoryId") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) {
+            CategoryProductsScreen(
                 onProductClick = { product ->
                     navController.navigate(ScreensRoute.ProductDetail.createRoute(product.id))
                 },
