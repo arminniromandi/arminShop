@@ -80,7 +80,7 @@ fun ShopBottomNavigation(
                     elevation = 8.dp,
                     shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp)
                 ),
-            color = MaterialTheme.colorScheme.surface,
+            color = Color.White,
             tonalElevation = 3.dp
         ) {
             BoxWithConstraints(

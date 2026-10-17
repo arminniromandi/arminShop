@@ -43,6 +43,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.domain.model.Product
+import ir.arminniromandi.arminshop.presentation.components.ProductItemCard
+import ir.arminniromandi.arminshop.presentation.components.formatPersianPrice
 import ir.arminniromandi.arminshop.presentation.viewmodels.SearchViewModel
 
 private val ScreenBackground = Color(0xFFFFF6EE)

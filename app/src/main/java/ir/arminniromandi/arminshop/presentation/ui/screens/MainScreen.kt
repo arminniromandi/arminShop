@@ -1,5 +1,6 @@
 package ir.arminniromandi.arminshop.presentation.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -11,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -56,7 +58,7 @@ fun MainScreen(
     ) {
         Box(modifier = modifier.fillMaxSize()) {
             Scaffold(
-                modifier = Modifier.systemBarsPadding(),
+                modifier = Modifier.systemBarsPadding().background(Color(0xFFFFF6EE)),
                 topBar = {
                     if (!isLoginRoute) {
                         ShopHeader(
