@@ -1,8 +1,9 @@
 package ir.arminniromandi.arminshop.presentation.ui.screens
 
+import android.content.Intent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -24,14 +24,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,16 +40,22 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,14 +63,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.domain.model.Product
 import ir.arminniromandi.arminshop.domain.model.ProductComment
+import ir.arminniromandi.arminshop.presentation.animation.productSharedElement
 import ir.arminniromandi.arminshop.presentation.components.ProductItemCard
 import ir.arminniromandi.arminshop.presentation.components.formatPersianPrice
-import ir.arminniromandi.arminshop.presentation.ui.theme.CardBgSlate
 import ir.arminniromandi.arminshop.presentation.ui.theme.PrimaryOrangeRed
 import ir.arminniromandi.arminshop.presentation.ui.theme.ScreenBackground
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextDarkColor
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextGrayColor
 import ir.arminniromandi.arminshop.presentation.viewmodels.ProductDetailViewModel
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun ProductDetailScreen(
@@ -90,6 +96,7 @@ fun ProductDetailScreen(
             onCommentChange = viewModel::onCommentTextChanged,
             onRatingChange = viewModel::onUserRatingChanged,
             onSubmitComment = { viewModel.submitComment() },
+            onSubmitReply = { replyText -> viewModel.submitReply(replyText) },
             onProductClick = onProductClick,
             onAddToCart = onAddToCart
         )
@@ -100,7 +107,10 @@ fun ProductDetailScreen(
                 .background(ScreenBackground),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = "در حال بارگذاری محصول...", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = "در حال بارگذاری محصول...",
+                style = MaterialTheme.typography.bodyLarge.copy(color = TextDarkColor)
+            )
         }
     }
 }
@@ -115,316 +125,392 @@ fun ProductDetailContent(
     onCommentChange: (String) -> Unit,
     onRatingChange: (Float) -> Unit,
     onSubmitComment: () -> Unit,
+    onSubmitReply: (String) -> Unit,
     onProductClick: (Product) -> Unit,
     onAddToCart: (Product) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf("توضیحات") }
+
+    val context = LocalContext.current
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val topOffsetPx = with(density) { 16.dp.toPx() }
+
+    // Coordinates for each section to enable smooth scrolling
+    var parentCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var descriptionCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var featuresCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var commentsCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var similarProductsCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+
+    fun scrollToSection(targetCoords: LayoutCoordinates?) {
+        val parent = parentCoordinates
+        val target = targetCoords
+        if (parent != null && target != null && parent.isAttached && target.isAttached) {
+            val yInParent = parent.localPositionOf(target, Offset.Zero).y
+            val targetScroll = (scrollState.value + yInParent - topOffsetPx).roundToInt().coerceAtLeast(0)
+            coroutineScope.launch {
+                scrollState.animateScrollTo(targetScroll)
+            }
+        }
+    }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .background(ScreenBackground)
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 24.dp),
+                .verticalScroll(scrollState)
+                .onGloballyPositioned { parentCoordinates = it }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Top Image Container with Discount Badge & Quick Actions
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-                    .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-                    .background(CardBgSlate)
+            // ==========================================
+            // 1. TOP MAIN WHITE CARD (Product Details Card)
+            // ==========================================
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(26.dp),
+                color = Color.White,
+                shadowElevation = 1.dp
             ) {
-                // Product Image
-                Image(
-                    painter = painterResource(id = product.imageRes),
-                    contentDescription = product.name,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    contentScale = ContentScale.Fit
-                )
-
-                // Discount Badge (Top Right)
-                if (product.discountPrec > 0) {
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(top = 16.dp, end = 16.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            color = PrimaryOrangeRed
-                        ) {
-                            Text(
-                                text = "${formatPersianPrice(product.discountPrec.toLong())}٪",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                ),
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Overlay Action Icons (Left side)
                 Column(
                     modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    IconButton(
-                        onClick = { },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.8f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FavoriteBorder,
-                            contentDescription = "علاقه‌مندی",
-                            tint = Color.Gray,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.8f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.BookmarkBorder,
-                            contentDescription = "نشان‌کردن",
-                            tint = Color.Gray,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-
-            // 2. Rating & Comments Info Pill Card (Overlapping Row)
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(20.dp),
-                color = Color.White,
-                shadowElevation = 3.dp
-            ) {
-                Row(
-                    modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    // 1.1 Product Image Container (Light grey background)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(260.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFFF1F1F5))
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "اشتراک‌گذاری",
-                            tint = TextGrayColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Icon(
-                            imageVector = Icons.Default.BookmarkBorder,
-                            contentDescription = "ذخیره",
-                            tint = TextGrayColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                        // Discount Badge (Top Right)
+                        if (product.discountPrec > 0) {
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                Surface(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(12.dp),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = PrimaryOrangeRed
+                                ) {
+                                    Text(
+                                        text = "${formatPersianPrice(product.discountPrec.toLong())}٪",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        ),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
 
-                    // Rating Badge
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "امتیاز",
-                            tint = Color(0xFFFFB800),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = formatPersianPriceNumber("%.1f".format(product.rating)),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = TextDarkColor
-                            )
-                        )
-                    }
-
-                    // Comments Count Badge
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Box(
+                        // Left Heart Icon
+                        IconButton(
+                            onClick = { },
                             modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(PrimaryOrangeRed),
-                            contentAlignment = Alignment.Center
+                                .align(Alignment.CenterStart)
+                                .padding(start = 8.dp)
+                                .size(36.dp)
                         ) {
-                            Text(
-                                text = formatPersianPrice(product.reviewsCount.toLong()),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp
-                                )
+                            Icon(
+                                imageVector = Icons.Outlined.FavoriteBorder,
+                                contentDescription = "Favorite",
+                                tint = Color(0xFF9E9E9E),
+                                modifier = Modifier.size(22.dp)
                             )
                         }
 
-                        Icon(
-                            imageVector = Icons.Default.ChatBubbleOutline,
-                            contentDescription = "نظرات",
-                            tint = TextGrayColor,
-                            modifier = Modifier.size(20.dp)
+                        // Right Heart Icon
+                        IconButton(
+                            onClick = { },
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 8.dp)
+                                .size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.FavoriteBorder,
+                                contentDescription = "Favorite",
+                                tint = Color(0xFF9E9E9E),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        // Product Image in Center
+                        Image(
+                            painter = painterResource(id = product.imageRes),
+                            contentDescription = product.name,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp)
+                                .productSharedElement("product-image-${product.id}"),
+                            contentScale = ContentScale.Fit
                         )
                     }
-                }
-            }
 
-            // 3. Product Title
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = product.name,
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = TextDarkColor
-                    )
-                )
-            }
-
-            // 4. Navigation Tabs / Filter Pills
-            val tabs = listOf("توضیحات", "ویژگی ها", "نظرات", "محصولات مشابه")
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp)
-            ) {
-                items(tabs) { tab ->
-                    val isSelected = tab == selectedTab
+                    // 1.2 Action Pill (Share, Rating from DB, Bookmark, Comments count with badge from DB)
                     Surface(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable { selectedTab = tab },
-                        shape = RoundedCornerShape(16.dp),
-                        color = if (isSelected) Color.White else Color.Transparent,
-                        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, PrimaryOrangeRed) else null
+                            .align(Alignment.Start)
+                            .shadow(elevation = 1.dp, shape = RoundedCornerShape(50)),
+                        shape = RoundedCornerShape(50),
+                        color = Color.White,
+                        border = BorderStroke(1.dp, Color(0xFFEEEEEE))
                     ) {
-                        Text(
-                            text = tab,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = if (isSelected) PrimaryOrangeRed else TextGrayColor,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            ),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Share Icon
+                            Icon(
+                                imageVector = Icons.Outlined.Share,
+                                contentDescription = "Share",
+                                tint = Color(0xFF616161),
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clickable {
+                                        val shareText = buildString {
+                                            appendLine(product.name)
+                                            if (product.discountPrec > 0) {
+                                                appendLine("قیمت: ${formatPersianPrice(product.finalPrice)} تومان (${formatPersianPrice(product.discountPrec.toLong())}٪ تخفیف)")
+                                            } else {
+                                                appendLine("قیمت: ${formatPersianPrice(product.mainPrice)} تومان")
+                                            }
+                                            if (product.description.isNotBlank()) {
+                                                appendLine()
+                                                appendLine(product.description)
+                                            }
+                                        }
+                                        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                            putExtra(Intent.EXTRA_TEXT, shareText)
+                                            putExtra(Intent.EXTRA_TITLE, product.name)
+                                            type = "text/plain"
+                                        }
+                                        val shareIntent = Intent.createChooser(sendIntent, "اشتراک‌گذاری محصول")
+                                        context.startActivity(shareIntent)
+                                    }
+                            )
+
+                            // Rating: Gold Star + Persian rating from Database
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Star,
+                                    contentDescription = "Rating",
+                                    tint = Color(0xFFFFB800),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = formatPersianNumber("%.1f".format(product.rating)),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextDarkColor,
+                                        fontSize = 13.sp
+                                    )
+                                )
+                            }
+
+                            // Bookmark Icon
+                            Icon(
+                                imageVector = Icons.Outlined.BookmarkBorder,
+                                contentDescription = "Bookmark",
+                                tint = Color(0xFF616161),
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clickable { }
+                            )
+
+                            // Comment bubble with small red badge (click scrolls to comments section)
+                            Box(
+                                contentAlignment = Alignment.TopEnd,
+                                modifier = Modifier.clickable {
+                                    selectedTab = "نظرات"
+                                    scrollToSection(commentsCoordinates)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.Chat,
+                                    contentDescription = "Comments",
+                                    tint = Color(0xFF616161),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clip(CircleShape)
+                                        .background(PrimaryOrangeRed),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = formatPersianNumber(product.comments.size.toString()),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
                     }
-                }
-            }
 
-            // 5. Section 1: Description ("توضیحات")
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "توضیحات",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = TextDarkColor
+                    // 1.3 Product Title
+                    Text(
+                        text = product.name,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = TextDarkColor,
+                            fontSize = 16.sp
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .productSharedElement("product-title-${product.id}")
                     )
-                )
 
-                Text(
-                    text = product.description.ifBlank {
-                        "**با توجه به تفاوت رنگ‌ها در صفحه نمایش دستگاه‌های مختلف، ممکن است رنگ محصولات در تصویر تا ۲۰٪ با واقعیت متفاوت باشد** دارای ۵ رنگ جذاب. تمام نخ پنبه. پارچه پیراهن کشمیر. دم دست و پایین بلوز کشباف. سایزبندی M تا 4XL"
-                    },
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = TextDarkColor,
-                        lineHeight = 22.sp
-                    )
-                )
-            }
+                    // 1.4 Tabs / Filter Pills with Animated Scroll to Section
+                    val tabs = listOf("توضیحات", "ویژگی ها", "نظرات", "محصولات مشابه")
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(tabs) { tab ->
+                            val isSelected = tab == selectedTab
+                            Surface(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable {
+                                        selectedTab = tab
+                                        when (tab) {
+                                            "توضیحات" -> scrollToSection(descriptionCoordinates)
+                                            "ویژگی ها" -> scrollToSection(featuresCoordinates)
+                                            "نظرات" -> scrollToSection(commentsCoordinates)
+                                            "محصولات مشابه" -> scrollToSection(similarProductsCoordinates)
+                                        }
+                                    },
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isSelected) Color.White else Color(0xFFF7F7F8),
+                                border = if (isSelected) BorderStroke(1.dp, PrimaryOrangeRed) else null
+                            ) {
+                                Text(
+                                    text = tab,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = if (isSelected) PrimaryOrangeRed else Color(0xFF757575),
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 12.sp
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                                )
+                            }
+                        }
+                    }
 
-            // 6. Section 2: Features ("ویژگی ها")
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "ویژگی ها",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = TextDarkColor
-                    )
-                )
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White
-                ) {
+                    // 1.5 Section: "توضیحات" (Description)
                     Column(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onGloballyPositioned { descriptionCoordinates = it },
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "وزن خالص: ${product.features.weight.ifBlank { "۳۴۰ گرم" }}",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = TextDarkColor)
+                            text = "توضیحات",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = TextDarkColor,
+                                fontSize = 14.sp
+                            )
                         )
+
+                        val descriptionText = product.description.ifBlank {
+                            "** با توجه به تفاوت رنگ‌ها در صفحه نمایش دستگاه‌های مختلف، ممکن است رنگ محصولات در تصویر تا ۲۰٪ با واقعیت متفاوت باشد ** دارای ۵ رنگ جذاب، تمام نخ پنبه، پارچه پیراهن کشمیر، دم دست و پایین بلوز کشباف، سایز بندی M تا 4XL\n\n** با توجه به تفاوت رنگ‌ها در صفحه نمایش دستگاه‌های مختلف، ممکن است رنگ محصولات در تصویر تا ۲۰٪ با واقعیت متفاوت باشد ** دارای ۵ رنگ جذاب، تمام نخ پنبه، پارچه پیراهن کشمیر، دم دست و پایین بلوز کشباف، سایز بندی M تا 4XL"
+                        }
+
                         Text(
-                            text = "رنگ: ${product.features.color.ifBlank { "متنوع" }}",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = TextDarkColor)
+                            text = descriptionText,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = Color(0xFF424242),
+                                lineHeight = 21.sp,
+                                fontSize = 12.sp
+                            )
                         )
+                    }
+
+                    // 1.6 Section: "ویژگی ها" (Features)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onGloballyPositioned { featuresCoordinates = it },
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
-                            text = "وزن با بسته‌بندی: ۴۰۰ گرم",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = TextDarkColor)
+                            text = "ویژگی ها",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = TextDarkColor,
+                                fontSize = 14.sp
+                            )
                         )
+
+                        val featuresList = listOf(
+                            "وزن خالص: ${product.features.weight.ifBlank { "۳۴۰ گرم" }}",
+                            "رنگ: ${product.features.color.ifBlank { "متنوع" }}",
+                            "وزن خالص: ${product.features.weight.ifBlank { "۳۴۰ گرم" }}",
+                            "وزن با بسته‌بندی: ۴۰۰ گرم"
+                        )
+
+                        featuresList.forEach { feature ->
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFFF7F7F8)
+                            ) {
+                                Text(
+                                    text = feature,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = Color(0xFF424242),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            // 7. Section 3: Submit Comment & Rating ("ثبت نظر")
+            // ==========================================
+            // 2. SUBMIT COMMENT SECTION ("ثبت نظر")
+            // ==========================================
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
                     text = "ثبت نظر",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextDarkColor
+                        color = TextDarkColor,
+                        fontSize = 15.sp
                     )
                 )
 
-                // Comment Input Box
+                // White Comment Input Card
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp),
-                    shape = RoundedCornerShape(16.dp),
+                        .height(90.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = Color.White,
                     shadowElevation = 1.dp
                 ) {
@@ -437,57 +523,75 @@ fun ProductDetailContent(
                         if (commentText.isEmpty()) {
                             Text(
                                 text = "نظر خود را وارد کنید",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = TextGrayColor)
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color(0xFF9E9E9E),
+                                    fontSize = 13.sp
+                                )
                             )
                         }
                         BasicTextField(
                             value = commentText,
                             onValueChange = onCommentChange,
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = TextDarkColor),
+                            textStyle = MaterialTheme.typography.bodySmall.copy(
+                                color = TextDarkColor,
+                                fontSize = 13.sp
+                            ),
                             modifier = Modifier.fillMaxSize()
                         )
                     }
                 }
 
-                // Interactive Rating Selector & Submit Button
+                // Row: Submit Button on Left, Rating Stars on Right (RTL context)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = onSubmitComment,
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrangeRed),
-                        shape = RoundedCornerShape(12.dp)
+                    // Red Submit Button
+                    Surface(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onSubmitComment() },
+                        shape = RoundedCornerShape(8.dp),
+                        color = PrimaryOrangeRed
                     ) {
                         Text(
                             text = "ثبت نظر",
-                            style = MaterialTheme.typography.labelLarge.copy(
+                            style = MaterialTheme.typography.labelMedium.copy(
                                 color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            ),
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
                         )
                     }
 
-                    // Interactive Star Rating Bar
+                    // Interactive Rating Stars (1 to 5)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
                             text = "امتیاز دهید",
-                            style = MaterialTheme.typography.bodySmall.copy(color = TextGrayColor)
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = TextDarkColor,
+                                fontSize = 12.sp
+                            )
                         )
-                        Row {
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             for (i in 1..5) {
-                                val starRating = i.toFloat()
+                                val starValue = i.toFloat()
                                 Icon(
-                                    imageVector = if (userRating >= starRating) Icons.Default.Star else Icons.Default.StarBorder,
+                                    imageVector = if (userRating >= starValue) Icons.Filled.Star else Icons.Outlined.StarBorder,
                                     contentDescription = "Star $i",
-                                    tint = if (userRating >= starRating) Color(0xFFFFB800) else TextGrayColor,
+                                    tint = if (userRating >= starValue) Color(0xFFFFB800) else Color(0xFFBDBDBD),
                                     modifier = Modifier
-                                        .size(24.dp)
-                                        .clickable { onRatingChange(starRating) }
+                                        .size(20.dp)
+                                        .clickable { onRatingChange(starValue) }
                                 )
                             }
                         }
@@ -495,52 +599,106 @@ fun ProductDetailContent(
                 }
             }
 
-            // 8. Section 4: User Reviews List ("نظرات کاربران")
+            // ==========================================
+            // 3. USER REVIEWS SECTION ("نظرات کاربران" from DB)
+            // ==========================================
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .onGloballyPositioned { commentsCoordinates = it },
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "نظرات کاربران (${formatPersianPrice(product.comments.size.toLong())})",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = TextDarkColor
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "نظرات کاربران (${formatPersianNumber(product.comments.size.toString())})",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = TextDarkColor,
+                            fontSize = 15.sp
+                        )
                     )
-                )
+
+                    // Average rating summary
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = "Average rating",
+                            tint = Color(0xFFFFB800),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = formatPersianNumber("%.1f".format(product.rating)),
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = TextDarkColor,
+                                fontSize = 13.sp
+                            )
+                        )
+                    }
+                }
 
                 if (product.comments.isEmpty()) {
-                    Text(
-                        text = "هنوز نظری برای این محصول ثبت نشده است. اولین نفری باشید که نظر ثبت می‌کنید!",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = TextGrayColor),
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.White,
+                        shadowElevation = 1.dp
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "هنوز نظری برای این محصول ثبت نشده است. اولین نظر را شما ثبت کنید!",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = TextGrayColor,
+                                    fontSize = 12.sp
+                                )
+                            )
+                        }
+                    }
                 } else {
+                    // Display all comments dynamically fetched from Room Database
                     product.comments.forEach { comment ->
-                        UserCommentCard(comment = comment)
+                        DatabaseCommentCard(
+                            comment = comment,
+                            onSendReply = { replyText -> onSubmitReply(replyText) }
+                        )
                     }
                 }
             }
 
-            // 9. Section 5: Similar Products ("محصولات مشابه")
+            // ==========================================
+            // 4. SIMILAR PRODUCTS SECTION ("محصولات مشابه")
+            // ==========================================
             if (similarProducts.isNotEmpty()) {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { similarProductsCoordinates = it },
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "محصولات مشابه",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = TextDarkColor
-                        ),
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                            color = TextDarkColor,
+                            fontSize = 15.sp
+                        )
                     )
 
                     LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        contentPadding = PaddingValues(vertical = 4.dp)
                     ) {
                         items(similarProducts, key = { it.id }) { similarProduct ->
                             ProductItemCard(
@@ -552,15 +710,24 @@ fun ProductDetailContent(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
+// -------------------------------------------------------------
+// Component: Database-Backed Comment Card matching Design
+// -------------------------------------------------------------
 @Composable
-fun UserCommentCard(
+private fun DatabaseCommentCard(
     comment: ProductComment,
+    onSendReply: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var replyText by remember { mutableStateOf("") }
+    var isReplying by remember { mutableStateOf(false) }
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -570,9 +737,10 @@ fun UserCommentCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // User Header Row (User Name on Right, Star Rating + Date on Left)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -582,40 +750,126 @@ fun UserCommentCard(
                     text = comment.userName,
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextDarkColor
+                        color = TextDarkColor,
+                        fontSize = 13.sp
                     )
                 )
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    if (comment.date.isNotBlank()) {
+                        Text(
+                            text = comment.date,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFF9E9E9E),
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
+
                     Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "Star",
                         tint = Color(0xFFFFB800),
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                     Text(
-                        text = formatPersianPriceNumber("%.1f".format(comment.rating)),
+                        text = formatPersianNumber("%.1f".format(comment.rating)),
                         style = MaterialTheme.typography.bodySmall.copy(
+                            color = TextDarkColor,
                             fontWeight = FontWeight.Bold,
-                            color = TextDarkColor
+                            fontSize = 12.sp
                         )
                     )
                 }
             }
 
+            // Comment text
             Text(
                 text = comment.text,
-                style = MaterialTheme.typography.bodyMedium.copy(color = TextDarkColor),
-                lineHeight = 20.sp
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = Color(0xFF424242),
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp
+                )
             )
+
+            // Reply input box
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(36.dp),
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFFF7F7F8)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (replyText.isEmpty()) {
+                        Text(
+                            text = "پاسخ خود را وارد کنید",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = Color(0xFF9E9E9E),
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                    BasicTextField(
+                        value = replyText,
+                        onValueChange = {
+                            replyText = it
+                            isReplying = it.isNotBlank()
+                        },
+                        textStyle = MaterialTheme.typography.bodySmall.copy(
+                            color = TextDarkColor,
+                            fontSize = 11.sp
+                        ),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            // Show "ارسال پاسخ" button if user starts typing in reply box
+            if (isReplying) {
+                Surface(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            if (replyText.isNotBlank()) {
+                                onSendReply(replyText)
+                                replyText = ""
+                                isReplying = false
+                            }
+                        },
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color.White,
+                    border = BorderStroke(1.dp, PrimaryOrangeRed)
+                ) {
+                    Text(
+                        text = "ارسال پاسخ",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = PrimaryOrangeRed,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        ),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                    )
+                }
+            }
         }
     }
 }
 
-private fun formatPersianPriceNumber(numberStr: String): String {
+// -------------------------------------------------------------
+// Helper: Format Persian Digits
+// -------------------------------------------------------------
+private fun formatPersianNumber(numberStr: String): String {
     val persianDigits = charArrayOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
     return numberStr.map { char ->
         if (char in '0'..'9') persianDigits[char - '0'] else char

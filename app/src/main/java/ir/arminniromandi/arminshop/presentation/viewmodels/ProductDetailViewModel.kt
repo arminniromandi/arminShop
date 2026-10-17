@@ -7,11 +7,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import ir.arminniromandi.arminshop.domain.model.Product
 import ir.arminniromandi.arminshop.domain.model.ProductComment
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
+import ir.arminniromandi.arminshop.domain.repository.UserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -23,6 +25,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ProductDetailViewModel @Inject constructor(
     private val productRepository: ProductRepository,
+    private val userRepository: UserRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -62,7 +65,7 @@ class ProductDetailViewModel @Inject constructor(
         _userRating.value = rating
     }
 
-    fun submitComment(userName: String = "کاربر محترم") {
+    fun submitComment(customUserName: String? = null) {
         val text = _commentText.value.trim()
         if (text.isBlank()) return
 
@@ -71,9 +74,14 @@ class ProductDetailViewModel @Inject constructor(
         val currentDate = dateFormat.format(Date())
 
         viewModelScope.launch {
+            val userPrefs = userRepository.getUserData().firstOrNull()
+            val resolvedName = customUserName
+                ?: userPrefs?.fullName?.takeIf { it.isNotBlank() }
+                ?: "بهرام افشاری"
+
             val newComment = ProductComment(
                 id = 0,
-                userName = userName,
+                userName = resolvedName,
                 rating = currentRating,
                 text = text,
                 date = currentDate
@@ -83,6 +91,30 @@ class ProductDetailViewModel @Inject constructor(
             // Reset input
             _commentText.value = ""
             _userRating.value = 5f
+        }
+    }
+
+    fun submitReply(replyText: String, replyRating: Float = 5f, customUserName: String? = null) {
+        val text = replyText.trim()
+        if (text.isBlank()) return
+
+        val dateFormat = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
+        val currentDate = dateFormat.format(Date())
+
+        viewModelScope.launch {
+            val userPrefs = userRepository.getUserData().firstOrNull()
+            val resolvedName = customUserName
+                ?: userPrefs?.fullName?.takeIf { it.isNotBlank() }
+                ?: "بهرام افشاری"
+
+            val newComment = ProductComment(
+                id = 0,
+                userName = resolvedName,
+                rating = replyRating,
+                text = text,
+                date = currentDate
+            )
+            productRepository.addComment(productId, newComment)
         }
     }
 }

@@ -21,9 +21,45 @@ object MockProducts {
             mainPrice = 2000000L,
             finalPrice = 1550000L,
             discountPrec = 10,
-            rating = 4.8f,
-            reviewsCount = 18,
-            comments = emptyList(),
+            rating = 4.3f,
+            reviewsCount = 5,
+            comments = listOf(
+                ProductComment(
+                    id = 1011,
+                    userName = "سعیده زیانی",
+                    rating = 3.5f,
+                    text = "متن نظر کاربر در اینجا نوشته می شود",
+                    date = "۱۴۰۳/۰۲/۱۵"
+                ),
+                ProductComment(
+                    id = 1012,
+                    userName = "الهه لطفی",
+                    rating = 4.0f,
+                    text = "عالی بود، پیشنهاد می کنم بسیار باکیفیت و گرم :)",
+                    date = "۱۴۰۳/۰۲/۲۰"
+                ),
+                ProductComment(
+                    id = 1013,
+                    userName = "محنا خلیلی",
+                    rating = 4.5f,
+                    text = "امکان سفارش چند رنگ رو دارم؟",
+                    date = "۱۴۰۳/۰۲/۲۴"
+                ),
+                ProductComment(
+                    id = 1014,
+                    userName = "فاطمه خسروی",
+                    rating = 5.0f,
+                    text = "بله با شماره ۱۲۳۴۵۶۴۵۶ ثبت سفارش کنین",
+                    date = "۱۴۰۳/۰۲/۲۵"
+                ),
+                ProductComment(
+                    id = 1015,
+                    userName = "محنا خلیلی",
+                    rating = 4.5f,
+                    text = "ممنون از پاسختون",
+                    date = "۱۴۰۳/۰۲/۲۶"
+                )
+            ),
             category = ProductCategory.WOMEN
         ),
         Product(
@@ -39,8 +75,16 @@ object MockProducts {
             finalPrice = 5760000L,
             discountPrec = 0,
             rating = 4.6f,
-            reviewsCount = 12,
-            comments = emptyList(),
+            reviewsCount = 1,
+            comments = listOf(
+                ProductComment(
+                    id = 1021,
+                    userName = "رویا میرزایی",
+                    rating = 4.6f,
+                    text = "خیلی شیک و خوش دوخته، رنگش دقیقا مثل عکسه.",
+                    date = "۱۴۰۳/۰۱/۱۸"
+                )
+            ),
             category = ProductCategory.WOMEN
         ),
         Product(

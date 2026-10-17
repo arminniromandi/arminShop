@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -60,12 +62,11 @@ fun ShopBottomNavigation(
     onItemSelected: (BottomNavItem) -> Unit,
     modifier: Modifier = Modifier,
     cartBadgeCount: Int = 0,
-    iconContent: @Composable (item: BottomNavItem, isSelected: Boolean, tint: Color) -> Unit = { _, isSelected, tint ->
-        Box(
-            modifier = Modifier
-                .size(24.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(tint.copy(alpha = if (isSelected) 1f else 0.35f))
+    iconContent: @Composable (item: BottomNavItem, isSelected: Boolean, tint: Color) -> Unit = { it, isSelected, tint ->
+        Icon(
+            painter = painterResource(it.icon),
+            contentDescription = it.name ,
+            tint = Color.Unspecified
         )
     }
 ) {

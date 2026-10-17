@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import ir.arminniromandi.arminshop.data.mock.MockProducts
 import ir.arminniromandi.arminshop.domain.model.Product
+import ir.arminniromandi.arminshop.presentation.animation.productSharedElement
 import ir.arminniromandi.arminshop.presentation.ui.theme.ArminShopTheme
 import ir.arminniromandi.arminshop.presentation.ui.theme.CardBgSlate
 import ir.arminniromandi.arminshop.presentation.ui.theme.PrimaryOrangeRed
@@ -93,7 +94,8 @@ fun ProductItemCard(
                 contentDescription = product.name,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 8.dp),
+                    .padding(bottom = 8.dp)
+                    .productSharedElement("product-image-${product.id}"),
                 contentScale = ContentScale.Fit
             )
         }
@@ -122,7 +124,8 @@ fun ProductItemCard(
                         text = product.name,
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = TextDarkColor),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.productSharedElement("product-title-${product.id}")
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))

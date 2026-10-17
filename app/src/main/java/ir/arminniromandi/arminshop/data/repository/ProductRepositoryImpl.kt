@@ -9,45 +9,86 @@ import ir.arminniromandi.arminshop.domain.model.ProductCategory
 import ir.arminniromandi.arminshop.domain.model.ProductComment
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
 import ir.arminniromandi.arminshop.utils.Constance
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 class ProductRepositoryImpl @Inject constructor(
     private val productDao: ProductDao
 ) : ProductRepository {
 
-    override fun getProducts(): Flow<List<Product>> {
-        return productDao.getProductsWithComments().map { list ->
-            if (list.isEmpty()) {
-                MockProducts.sampleProducts
-            } else {
-                list.map { it.toDomain() }
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            checkAndSeedDatabase()
+        }
+    }
+
+    private suspend fun checkAndSeedDatabase() = withContext(Dispatchers.IO) {
+        if (productDao.getProductsCount() == 0) {
+            val sampleProducts = MockProducts.sampleProducts
+            val productEntities = sampleProducts.map { it.toEntity() }
+            val commentEntities = sampleProducts.flatMap { product ->
+                product.comments.map { it.toEntity(product.id) }
+            }
+            productDao.insertProducts(productEntities)
+            if (commentEntities.isNotEmpty()) {
+                productDao.insertComments(commentEntities)
             }
         }
     }
 
+    override fun getProducts(): Flow<List<Product>> {
+        return flow {
+            checkAndSeedDatabase()
+            emitAll(
+                productDao.getProductsWithComments().map { list ->
+                    if (list.isEmpty()) {
+                        MockProducts.sampleProducts
+                    } else {
+                        list.map { it.toDomain() }
+                    }
+                }
+            )
+        }
+    }
+
     override fun getProductById(productId: Int): Flow<Product?> {
-        return productDao.getProductWithCommentsById(productId).map {
-            it?.toDomain() ?: MockProducts.sampleProducts.find { p -> p.id == productId }
+        return flow {
+            checkAndSeedDatabase()
+            emitAll(
+                productDao.getProductWithCommentsById(productId).map { productWithComments ->
+                    productWithComments?.toDomain()
+                        ?: MockProducts.sampleProducts.find { p -> p.id == productId }
+                }
+            )
         }
     }
 
     override fun searchProducts(query: String): Flow<List<Product>> {
         val trimmedQuery = query.trim()
-        return productDao.searchProductsWithComments(trimmedQuery).map { list ->
-            val dbResults = list.map { it.toDomain() }
-            if (dbResults.isEmpty()) {
-                MockProducts.sampleProducts.filter { product ->
-                    product.name.contains(trimmedQuery, ignoreCase = true) ||
-                            product.description.contains(trimmedQuery, ignoreCase = true)
+        return flow {
+            checkAndSeedDatabase()
+            emitAll(
+                productDao.searchProductsWithComments(trimmedQuery).map { list ->
+                    val dbResults = list.map { it.toDomain() }
+                    if (dbResults.isEmpty()) {
+                        MockProducts.sampleProducts.filter { product ->
+                            product.name.contains(trimmedQuery, ignoreCase = true) ||
+                                    product.description.contains(trimmedQuery, ignoreCase = true)
+                        }
+                    } else {
+                        dbResults
+                    }
                 }
-            } else {
-                dbResults
-            }
+            )
         }
     }
 
@@ -59,33 +100,43 @@ class ProductRepositoryImpl @Inject constructor(
         }?.name ?: categoryTitle
 
         val trimmedQuery = query.trim()
-        return productDao.getProductsByCategoryAndQuery(categoryEnumName, categoryTitle, trimmedQuery).map { list ->
-            val dbResults = list.map { it.toDomain() }
-            if (dbResults.isEmpty()) {
-                MockProducts.sampleProducts.filter { product ->
-                    val matchesCategory = product.category.name.equals(categoryEnumName, ignoreCase = true) ||
-                            product.category.title == categoryTitle
-                    val matchesQuery = trimmedQuery.isBlank() ||
-                            product.name.contains(trimmedQuery, ignoreCase = true) ||
-                            product.description.contains(trimmedQuery, ignoreCase = true)
-                    matchesCategory && matchesQuery
+        return flow {
+            checkAndSeedDatabase()
+            emitAll(
+                productDao.getProductsByCategoryAndQuery(categoryEnumName, categoryTitle, trimmedQuery).map { list ->
+                    val dbResults = list.map { it.toDomain() }
+                    if (dbResults.isEmpty()) {
+                        MockProducts.sampleProducts.filter { product ->
+                            val matchesCategory = product.category.name.equals(categoryEnumName, ignoreCase = true) ||
+                                    product.category.title == categoryTitle
+                            val matchesQuery = trimmedQuery.isBlank() ||
+                                    product.name.contains(trimmedQuery, ignoreCase = true) ||
+                                    product.description.contains(trimmedQuery, ignoreCase = true)
+                            matchesCategory && matchesQuery
+                        }
+                    } else {
+                        dbResults
+                    }
                 }
-            } else {
-                dbResults
-            }
+            )
         }
     }
 
     override suspend fun addComment(productId: Int, comment: ProductComment): Unit = withContext(Dispatchers.IO) {
+        checkAndSeedDatabase()
+
         val existingDbProduct = productDao.getProductWithCommentsById(productId).firstOrNull()
         if (existingDbProduct == null) {
             val mockProduct = MockProducts.sampleProducts.find { it.id == productId }
             if (mockProduct != null) {
                 productDao.insertProducts(listOf(mockProduct.toEntity()))
+                if (mockProduct.comments.isNotEmpty()) {
+                    productDao.insertComments(mockProduct.comments.map { it.toEntity(productId) })
+                }
             }
         }
 
-        // Insert new comment
+        // Insert new comment into Room
         productDao.insertComment(comment.toEntity(productId))
 
         // Recalculate average rating and total review count from Room DB
@@ -94,7 +145,8 @@ class ProductRepositoryImpl @Inject constructor(
             val comments = updatedProductWithComments.comments
             val count = comments.size
             val avgRating = if (count > 0) {
-                (comments.sumOf { it.rating.toDouble() } / count).toFloat()
+                val sum = comments.sumOf { it.rating.toDouble() }
+                ((sum / count * 10).roundToInt() / 10f)
             } else {
                 0f
             }
