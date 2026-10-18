@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -143,6 +145,13 @@ fun ProductDetailContent(
     var featuresCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var commentsCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var similarProductsCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+
+    // Reset tab to "توضیحات" when scrolling back to the top
+    LaunchedEffect(scrollState.value) {
+        if (scrollState.value <= 50 && selectedTab != "توضیحات") {
+            selectedTab = "توضیحات"
+        }
+    }
 
     fun scrollToSection(targetCoords: LayoutCoordinates?) {
         val parent = parentCoordinates
@@ -380,7 +389,17 @@ fun ProductDetailContent(
 
                     // 1.4 Tabs / Filter Pills with Animated Scroll to Section
                     val tabs = listOf("توضیحات", "ویژگی ها", "نظرات", "محصولات مشابه")
+                    val tabsListState = rememberLazyListState()
+
+                    LaunchedEffect(selectedTab) {
+                        val index = tabs.indexOf(selectedTab)
+                        if (index >= 0) {
+                            tabsListState.animateScrollToItem(index)
+                        }
+                    }
+
                     LazyRow(
+                        state = tabsListState,
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {

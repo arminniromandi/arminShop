@@ -66,7 +66,8 @@ fun ShopBottomNavigation(
         Icon(
             painter = painterResource(it.icon),
             contentDescription = it.name ,
-            tint = Color.Unspecified
+            tint = Color.Unspecified,
+            modifier = Modifier.size(22.dp)
         )
     }
 ) {

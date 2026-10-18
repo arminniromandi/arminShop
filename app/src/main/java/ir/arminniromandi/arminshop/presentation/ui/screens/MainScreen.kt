@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import ir.arminniromandi.arminshop.presentation.components.ShopBottomNavigation
@@ -30,6 +31,7 @@ import ir.arminniromandi.arminshop.presentation.components.TopMenuDropdown
 import ir.arminniromandi.arminshop.presentation.navigation.BottomNavItem
 import ir.arminniromandi.arminshop.presentation.navigation.MainNavHost
 import ir.arminniromandi.arminshop.presentation.navigation.ScreensRoute
+import ir.arminniromandi.arminshop.presentation.navigation.navigateToTab
 import ir.arminniromandi.arminshop.presentation.viewmodels.CartSharedViewModel
 
 @Composable
@@ -39,7 +41,8 @@ fun MainScreen(
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    val currentDestination = navBackStackEntry?.destination
+    val currentRoute = currentDestination?.route
 
     var isMenuOpen by remember { mutableStateOf(false) }
 
@@ -47,6 +50,14 @@ fun MainScreen(
     val notificationMessage by cartViewModel.topNotificationMessage.collectAsStateWithLifecycle()
 
     val isLoginRoute = currentRoute == ScreensRoute.Login.route
+
+    // Each tab is a nested graph, so the selected tab is the one whose graph route shows up in the
+    // hierarchy of the current destination. Shared destinations (e.g. product detail) live outside
+    // the tabs and therefore fall back to the home tab.
+    val selectedBottomNavItem = currentDestination
+        ?.hierarchy
+        ?.firstNotNullOfOrNull { BottomNavItem.fromGraphRoute(it.route) }
+        ?: BottomNavItem.HOME
 
     BackHandler(enabled = isMenuOpen) {
         isMenuOpen = false
@@ -74,7 +85,7 @@ fun MainScreen(
                             },
                             onProfileClick = {
                                 if (currentRoute != ScreensRoute.Profile.route) {
-                                    navController.navigate(ScreensRoute.Profile.route)
+                                    navController.navigateToTab(ScreensRoute.ProfileGraph.route)
                                 }
                             },
                             onNotificationClick = {
@@ -90,23 +101,11 @@ fun MainScreen(
                 bottomBar = {
                     if (!isLoginRoute) {
                         ShopBottomNavigation(
-                            selectedItem = when {
-                                currentRoute == ScreensRoute.Categories.route || currentRoute?.startsWith("category_products") == true -> BottomNavItem.CATEGORIES
-                                currentRoute == ScreensRoute.Cart.route -> BottomNavItem.CART
-                                currentRoute == ScreensRoute.Profile.route -> BottomNavItem.PROFILE
-                                else -> BottomNavItem.HOME
-                            },
+                            selectedItem = selectedBottomNavItem,
                             cartBadgeCount = cartTotalCount,
                             onItemSelected = { item ->
-                                val route = item.route
-                                if (currentRoute != route) {
-                                    navController.navigate(route) {
-                                        popUpTo(navController.graph.startDestinationId) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = route != ScreensRoute.Home.route
-                                    }
+                                if (selectedBottomNavItem != item) {
+                                    navController.navigateToTab(item.route)
                                 }
                             }
                         )
@@ -127,7 +126,7 @@ fun MainScreen(
                             onDismissRequest = { isMenuOpen = false },
                             onProfileClick = {
                                 if (currentRoute != ScreensRoute.Profile.route) {
-                                    navController.navigate(ScreensRoute.Profile.route)
+                                    navController.navigateToTab(ScreensRoute.ProfileGraph.route)
                                 }
                             },
                             modifier = Modifier.padding(top = innerPadding.calculateTopPadding())

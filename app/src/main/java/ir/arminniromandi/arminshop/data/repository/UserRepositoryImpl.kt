@@ -13,14 +13,13 @@ class UserRepositoryImpl @Inject constructor(
 
     override fun getUserData(): Flow<User?> {
         return userPreferencesDataSource.userPreferencesData.map { preferencesData ->
-            if (preferencesData.email != null) {
-                User(
-                    email = preferencesData.email,
-                    fullName = preferencesData.fullName ?: ""
-                )
-            } else {
-                null
-            }
+            User(
+                email = preferencesData.email ?: "",
+                fullName = preferencesData.fullName ?: "",
+                phoneNumber = preferencesData.phoneNumber ?: "",
+                birthDate = preferencesData.birthDate ?: "",
+                gender = preferencesData.gender ?: ""
+            )
         }
     }
 
@@ -30,6 +29,22 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun saveUserData(email: String, fullName: String) {
         userPreferencesDataSource.saveUserData(email, fullName)
+    }
+
+    override suspend fun saveUserProfile(
+        fullName: String,
+        phoneNumber: String,
+        email: String,
+        birthDate: String,
+        gender: String
+    ) {
+        userPreferencesDataSource.saveUserProfile(
+            fullName = fullName,
+            phoneNumber = phoneNumber,
+            email = email,
+            birthDate = birthDate,
+            gender = gender
+        )
     }
 
     override suspend fun saveEmail(email: String) {

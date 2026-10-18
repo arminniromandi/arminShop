@@ -13,6 +13,9 @@ import javax.inject.Singleton
 data class UserPreferencesData(
     val email: String?,
     val fullName: String?,
+    val phoneNumber: String?,
+    val birthDate: String?,
+    val gender: String?,
     val isLoggedIn: Boolean
 )
 
@@ -24,6 +27,9 @@ class UserPreferencesDataSource @Inject constructor(
         UserPreferencesData(
             email = preferences[PreferencesKeys.EMAIL],
             fullName = preferences[PreferencesKeys.FULL_NAME],
+            phoneNumber = preferences[PreferencesKeys.PHONE_NUMBER],
+            birthDate = preferences[PreferencesKeys.BIRTH_DATE],
+            gender = preferences[PreferencesKeys.GENDER],
             isLoggedIn = preferences[PreferencesKeys.IS_LOGGED_IN] ?: false
         )
     }
@@ -41,6 +47,22 @@ class UserPreferencesDataSource @Inject constructor(
     suspend fun saveFullName(fullName: String) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.FULL_NAME] = fullName
+        }
+    }
+
+    suspend fun saveUserProfile(
+        fullName: String,
+        phoneNumber: String,
+        email: String,
+        birthDate: String,
+        gender: String
+    ) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.FULL_NAME] = fullName
+            preferences[PreferencesKeys.PHONE_NUMBER] = phoneNumber
+            preferences[PreferencesKeys.EMAIL] = email
+            preferences[PreferencesKeys.BIRTH_DATE] = birthDate
+            preferences[PreferencesKeys.GENDER] = gender
         }
     }
 
@@ -66,6 +88,9 @@ class UserPreferencesDataSource @Inject constructor(
     private object PreferencesKeys {
         val EMAIL = stringPreferencesKey("user_email")
         val FULL_NAME = stringPreferencesKey("user_full_name")
+        val PHONE_NUMBER = stringPreferencesKey("user_phone_number")
+        val BIRTH_DATE = stringPreferencesKey("user_birth_date")
+        val GENDER = stringPreferencesKey("user_gender")
         val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
     }
 }
