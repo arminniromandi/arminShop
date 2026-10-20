@@ -36,14 +36,15 @@ import ir.arminniromandi.arminshop.presentation.viewmodels.CartSharedViewModel
 fun MainNavHost(
     navController: NavHostController,
     innerPadding: PaddingValues,
-    cartViewModel: CartSharedViewModel
+    cartViewModel: CartSharedViewModel,
+    startDestination: String = ScreensRoute.HomeGraph.route
 ) {
     SharedTransitionLayout {
         CompositionLocalProvider(LocalSharedTransitionScope provides this) {
             NavHost(
                 modifier = Modifier.padding(innerPadding),
                 navController = navController,
-                startDestination = ScreensRoute.HomeGraph.route,
+                startDestination = startDestination,
                 enterTransition = { fadeIn(animationSpec = tween(350)) },
                 exitTransition = { fadeOut(animationSpec = tween(350)) },
                 popEnterTransition = { fadeIn(animationSpec = tween(350)) },
@@ -174,9 +175,8 @@ fun MainNavHost(
                     }
                 }
 
-                // ---------------------------------------------------------------------------------
                 // Cart tab
-                // ---------------------------------------------------------------------------------
+
                 navigation(
                     route = ScreensRoute.CartGraph.route,
                     startDestination = ScreensRoute.Cart.route
@@ -241,6 +241,7 @@ fun MainNavHost(
                                     // Action for change avatar
                                 },
                                 onMenuItemClick = { item ->
+
                                     // Handle item click
                                 }
                             )

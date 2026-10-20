@@ -42,17 +42,32 @@ fun MainScreen(
     cartViewModel: CartSharedViewModel = hiltViewModel(),
     loginViewModel: LoginViewModel = hiltViewModel()
 ) {
+    val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
+    val isLoggedIn = loginUiState.isLoggedIn
+
+    // Wait until initial login state is retrieved from DataStore to prevent initial screen jump
+    if (isLoggedIn == null) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color(0xFFFFF6EE))
+        )
+        return
+    }
+
+    val startDestination = remember {
+        if (isLoggedIn) ScreensRoute.HomeGraph.route else ScreensRoute.Login.route
+    }
+
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
 
-    val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(loginUiState.isLoggedIn) {
-        if (loginUiState.isLoggedIn == false) {
+    LaunchedEffect(isLoggedIn) {
+        if (!isLoggedIn && currentRoute != null && currentRoute != ScreensRoute.Login.route) {
             navController.navigate(ScreensRoute.Login.route) {
-                popUpTo(ScreensRoute.HomeGraph.route) { inclusive = true }
+                popUpTo(0) { inclusive = true }
             }
         }
     }
@@ -129,7 +144,8 @@ fun MainScreen(
                     MainNavHost(
                         navController = navController,
                         innerPadding = innerPadding,
-                        cartViewModel = cartViewModel
+                        cartViewModel = cartViewModel,
+                        startDestination = startDestination
                     )
 
                     // Top sliding menu dropdown positioned right under topBar

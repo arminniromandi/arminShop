@@ -79,8 +79,8 @@ fun ProfileScreen(
 @Composable
 fun ProfileScreenContent(
     modifier: Modifier = Modifier,
-    userName: String = "آرمین نیرومندی",
-    phoneNumber: String = "۰۹۳۰۰۳۱۸۲۳۹",
+    userName: String = "",
+    phoneNumber: String = "",
     onEditProfileClick: () -> Unit = {},
     onChangeAvatarClick: () -> Unit = {},
     onMenuItemClick: (ProfileMenuItem) -> Unit = {}
