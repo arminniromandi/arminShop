@@ -15,14 +15,17 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import ir.arminniromandi.arminshop.data.local.AppDatabase
 import ir.arminniromandi.arminshop.data.local.UserPreferencesDataSource
+import ir.arminniromandi.arminshop.data.local.dao.AddressDao
 import ir.arminniromandi.arminshop.data.local.dao.CartDao
 import ir.arminniromandi.arminshop.data.local.dao.ProductDao
 import ir.arminniromandi.arminshop.data.local.entity.ProductCommentEntity
 import ir.arminniromandi.arminshop.data.local.entity.ProductEntity
 import ir.arminniromandi.arminshop.data.mock.MockProducts
+import ir.arminniromandi.arminshop.data.repository.AddressRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.CartRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.ProductRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.UserRepositoryImpl
+import ir.arminniromandi.arminshop.domain.repository.AddressRepository
 import ir.arminniromandi.arminshop.domain.repository.CartRepository
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
 import ir.arminniromandi.arminshop.domain.repository.UserRepository
@@ -95,6 +98,17 @@ object AppModule {
     @Singleton
     fun provideCartRepository(cartDao: CartDao): CartRepository {
         return CartRepositoryImpl(cartDao)
+    }
+
+    @Provides
+    fun provideAddressDao(database: AppDatabase): AddressDao {
+        return database.addressDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAddressRepository(addressDao: AddressDao): AddressRepository {
+        return AddressRepositoryImpl(addressDao)
     }
 
     private fun seedMockProducts(dao: ProductDao) {

@@ -9,5 +9,6 @@ data class CartItemEntity(
     val name: String,
     val imageRes: Int,
     val price: Long,
+    val originalPrice: Long = price,
     val quantity: Int
 )

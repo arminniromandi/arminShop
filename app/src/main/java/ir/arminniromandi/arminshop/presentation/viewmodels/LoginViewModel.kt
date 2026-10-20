@@ -28,7 +28,8 @@ data class LoginUiState(
     val isLoading: Boolean = false,
     val isCodeError: Boolean = false,
     val isEmailError: Boolean = false,
-    val timerSeconds: Int = 201
+    val timerSeconds: Int = 201,
+    val isLoggedIn: Boolean? = null
 ) {
     val isEmailSubmitEnabled: Boolean
         get() = email.isNotBlank()
@@ -61,8 +62,8 @@ class LoginViewModel @Inject constructor(
 
     private fun checkUserLoggedIn() {
         viewModelScope.launch {
-            userRepository.getUserData().collect { user ->
-                // User state collection if needed
+            userRepository.getLoginState().collect { isLoggedIn ->
+                _uiState.update { it.copy(isLoggedIn = isLoggedIn) }
             }
         }
     }
@@ -147,8 +148,9 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            // Save full name to DataStore after name is submitted
+            // Save full name and login state to DataStore after name is submitted
             userRepository.saveFullName(currentName)
+            userRepository.saveLoginState(true)
 
             delay(1000L) // Simulate network request
             _uiState.update { it.copy(isLoading = false) }

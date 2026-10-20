@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,16 +34,28 @@ import ir.arminniromandi.arminshop.presentation.navigation.MainNavHost
 import ir.arminniromandi.arminshop.presentation.navigation.ScreensRoute
 import ir.arminniromandi.arminshop.presentation.navigation.navigateToTab
 import ir.arminniromandi.arminshop.presentation.viewmodels.CartSharedViewModel
+import ir.arminniromandi.arminshop.presentation.viewmodels.LoginViewModel
 
 @Composable
 fun MainScreen(
     modifier: Modifier = Modifier,
-    cartViewModel: CartSharedViewModel = hiltViewModel()
+    cartViewModel: CartSharedViewModel = hiltViewModel(),
+    loginViewModel: LoginViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
+
+    val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(loginUiState.isLoggedIn) {
+        if (loginUiState.isLoggedIn == false) {
+            navController.navigate(ScreensRoute.Login.route) {
+                popUpTo(ScreensRoute.HomeGraph.route) { inclusive = true }
+            }
+        }
+    }
 
     var isMenuOpen by remember { mutableStateOf(false) }
 

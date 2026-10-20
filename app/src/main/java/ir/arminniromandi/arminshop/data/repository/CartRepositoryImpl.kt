@@ -27,6 +27,7 @@ class CartRepositoryImpl @Inject constructor(
         if (existingItem != null) {
             cartDao.updateQuantity(product.id, existingItem.quantity + 1)
         } else {
+            val originalPrice = product.mainPrice
             val price = if (product.discountPrec > 0 && product.finalPrice > 0) {
                 product.finalPrice
             } else {
@@ -37,6 +38,7 @@ class CartRepositoryImpl @Inject constructor(
                 name = product.name,
                 imageRes = product.imageRes,
                 price = price,
+                originalPrice = originalPrice,
                 quantity = 1
             )
             cartDao.insertOrUpdate(newItem)

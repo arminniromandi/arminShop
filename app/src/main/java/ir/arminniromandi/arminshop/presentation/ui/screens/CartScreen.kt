@@ -21,14 +21,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,6 +42,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,28 +62,31 @@ import ir.arminniromandi.arminshop.presentation.viewmodels.CartSharedViewModel
 fun CartScreen(
     modifier: Modifier = Modifier,
     viewModel: CartSharedViewModel = hiltViewModel(),
-    onNavigateToHome: () -> Unit = {}
+    onNavigateToHome: () -> Unit = {},
+    onNavigateToCheckout: () -> Unit = {}
 ) {
     val cartItems by viewModel.cartItems.collectAsStateWithLifecycle()
-    val totalCount by viewModel.cartTotalCount.collectAsStateWithLifecycle()
+    val subtotalPrice by viewModel.subtotalPrice.collectAsStateWithLifecycle()
+    val discountAmount by viewModel.discountAmount.collectAsStateWithLifecycle()
+    val itemsFinalPrice by viewModel.itemsFinalPrice.collectAsStateWithLifecycle()
 
     CartScreenContent(
         modifier = modifier,
         cartItems = cartItems,
-        totalCount = totalCount,
+        subtotalPrice = subtotalPrice,
+        discountAmount = discountAmount,
+        finalPrice = itemsFinalPrice,
         onIncreaseQuantity = { item ->
             viewModel.updateQuantity(item.productId, item.quantity + 1)
         },
         onDecreaseQuantity = { item ->
             viewModel.updateQuantity(item.productId, item.quantity - 1)
         },
-        onRemoveItem = { item ->
-            viewModel.removeFromCart(item.productId)
-        },
         onClearCart = {
             viewModel.clearCart()
         },
-        onNavigateToHome = onNavigateToHome
+        onNavigateToHome = onNavigateToHome,
+        onNavigateToCheckout = onNavigateToCheckout
     )
 }
 
@@ -91,27 +94,27 @@ fun CartScreen(
 fun CartScreenContent(
     modifier: Modifier = Modifier,
     cartItems: List<CartItemEntity>,
-    totalCount: Int,
+    subtotalPrice: Long,
+    discountAmount: Long,
+    finalPrice: Long,
     onIncreaseQuantity: (CartItemEntity) -> Unit,
     onDecreaseQuantity: (CartItemEntity) -> Unit,
-    onRemoveItem: (CartItemEntity) -> Unit,
     onClearCart: () -> Unit,
-    onNavigateToHome: () -> Unit
+    onNavigateToHome: () -> Unit,
+    onNavigateToCheckout: () -> Unit
 ) {
-    val totalPrice = cartItems.sumOf { it.price * it.quantity }
-
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .background(ScreenBackground)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Screen Header
+            // Header: Title "سبد خرید"
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 14.dp, top = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -119,7 +122,8 @@ fun CartScreenContent(
                     text = "سبد خرید",
                     style = MaterialTheme.typography.titleLarge.copy(
                         color = TextDarkColor,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
                     )
                 )
 
@@ -136,11 +140,11 @@ fun CartScreenContent(
                             imageVector = Icons.Default.DeleteOutline,
                             contentDescription = "حذف همه",
                             tint = PrimaryOrangeRed,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                         Text(
                             text = "حذف همه",
-                            style = MaterialTheme.typography.labelMedium.copy(
+                            style = MaterialTheme.typography.labelSmall.copy(
                                 color = PrimaryOrangeRed,
                                 fontWeight = FontWeight.Bold
                             )
@@ -172,7 +176,7 @@ fun CartScreenContent(
                                 imageVector = Icons.Default.ShoppingCart,
                                 contentDescription = null,
                                 tint = PrimaryOrangeRed,
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(44.dp)
                             )
                         }
 
@@ -216,61 +220,109 @@ fun CartScreenContent(
                     contentPadding = PaddingValues(bottom = 12.dp)
                 ) {
                     items(cartItems, key = { it.productId }) { item ->
-                        CartItemCard(
+                        CartItemCardImageStyle(
                             item = item,
                             onIncrease = { onIncreaseQuantity(item) },
-                            onDecrease = { onDecreaseQuantity(item) },
-                            onRemove = { onRemoveItem(item) }
+                            onDecrease = { onDecreaseQuantity(item) }
                         )
                     }
                 }
 
-                // Summary Card & Checkout Button
+                // Summary Card & Checkout Button (Image 1 Style)
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(24.dp),
                     color = Color.White,
                     shadowElevation = 4.dp
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // جمع قیمت
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "مجموع تعداد محصولات:",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = TextGrayColor)
-                            )
-                            Text(
-                                text = "${formatPersianPrice(totalCount.toLong())} عدد",
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    color = TextDarkColor,
-                                    fontWeight = FontWeight.Bold
+                                text = "جمع قیمت:",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = TextGrayColor,
+                                    fontSize = 13.sp
                                 )
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "مبلغ قابل پرداخت:",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = TextGrayColor)
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = formatPersianPrice(totalPrice),
+                                    text = formatPersianPrice(if (subtotalPrice > 0) subtotalPrice else finalPrice),
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        color = TextDarkColor,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "تومان",
+                                    style = MaterialTheme.typography.bodySmall.copy(color = TextGrayColor)
+                                )
+                            }
+                        }
+
+                        // تخفیف (قرمز / نارنجی)
+                        if (discountAmount > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "تخفیف:",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = TextGrayColor,
+                                        fontSize = 13.sp
+                                    )
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = formatPersianPrice(discountAmount),
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            color = PrimaryOrangeRed,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "تومان",
+                                        style = MaterialTheme.typography.bodySmall.copy(color = PrimaryOrangeRed)
+                                    )
+                                }
+                            }
+                        }
+
+                        // مبلغ نهایی
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "مبلغ نهایی:",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = TextGrayColor,
+                                    fontSize = 13.sp
+                                )
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = formatPersianPrice(finalPrice),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         color = TextDarkColor,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
                                     )
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -283,8 +335,9 @@ fun CartScreenContent(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
+                        // دکمه ادامه خرید
                         Button(
-                            onClick = { /* Handle Checkout */ },
+                            onClick = onNavigateToCheckout,
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrangeRed),
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier
@@ -292,10 +345,11 @@ fun CartScreenContent(
                                 .height(50.dp)
                         ) {
                             Text(
-                                text = "ادامه و تکمیل خرید",
+                                text = "ادامه خرید",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     color = Color.White,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
                                 )
                             )
                         }
@@ -306,12 +360,17 @@ fun CartScreenContent(
     }
 }
 
+/**
+ * Cart Item Card exactly matching Image 1:
+ * - Right: Title + Final price + Strikethrough original price
+ * - Center: Product image in rounded slate container
+ * - Left: Vertical counter pill (+ in green, count, - in red)
+ */
 @Composable
-fun CartItemCard(
+fun CartItemCardImageStyle(
     item: CartItemEntity,
     onIncrease: () -> Unit,
     onDecrease: () -> Unit,
-    onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -323,15 +382,61 @@ fun CartItemCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Product Image
+            // 1. Right Side: Title & Prices
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = TextDarkColor,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // Prices: Final price in تومان and strikethrough original price
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "${formatPersianPrice(item.price)} تومان",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = TextDarkColor,
+                            fontSize = 12.sp
+                        )
+                    )
+
+                    if (item.originalPrice > item.price) {
+                        Text(
+                            text = formatPersianPrice(item.originalPrice),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = TextGrayColor,
+                                textDecoration = TextDecoration.LineThrough,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+            }
+
+            // 2. Center: Product Image in soft rounded box
             Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(76.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(CardBgSlate),
+                    .background(Color(0xFFF1F3F6)),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -339,116 +444,68 @@ fun CartItemCard(
                     contentDescription = item.name,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.dp),
+                        .padding(6.dp),
                     contentScale = ContentScale.Fit
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
-            // Details and Quantity Controller
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            // 3. Left Side: Vertical Counter Pill (+ / count / -)
+            Surface(
+                modifier = Modifier
+                    .width(32.dp)
+                    .height(82.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFF7F8FA)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = item.name,
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = TextDarkColor
-                        ),
-                        maxLines = 1,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    IconButton(
-                        onClick = onRemove,
-                        modifier = Modifier.size(24.dp)
+                    // Green Plus Icon
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .clickable { onIncrease() },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "حذف",
-                            tint = Color.Red.copy(alpha = 0.7f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Price
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = formatPersianPrice(item.price),
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = TextDarkColor
-                            )
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "تومان",
-                            style = MaterialTheme.typography.bodySmall.copy(color = TextDarkColor)
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "افزایش تعداد",
+                            tint = Color(0xFF4CAF50),
+                            modifier = Modifier.size(16.dp)
                         )
                     }
 
-                    // Quantity Control
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    // Quantity Number (Persian)
+                    Text(
+                        text = formatPersianPrice(item.quantity.toLong()),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = TextDarkColor,
+                            fontSize = 13.sp
+                        )
+                    )
+
+                    // Red Minus Icon
+                    Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(CardBgSlate)
-                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .clickable { onDecrease() },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(26.dp)
-                                .clip(CircleShape)
-                                .background(PrimaryOrangeRed)
-                                .clickable { onIncrease() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "افزایش",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-
-                        Text(
-                            text = formatPersianPrice(item.quantity.toLong()),
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = TextDarkColor,
-                                fontSize = 14.sp
-                            )
+                        Icon(
+                            imageVector = Icons.Default.Remove,
+                            contentDescription = "کاهش تعداد",
+                            tint = Color(0xFFE53935),
+                            modifier = Modifier.size(16.dp)
                         )
-
-                        Box(
-                            modifier = Modifier
-                                .size(26.dp)
-                                .clip(CircleShape)
-                                .background(if (item.quantity > 1) PrimaryOrangeRed else Color.Gray)
-                                .clickable { onDecrease() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Remove,
-                                contentDescription = "کاهش",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
                     }
                 }
             }

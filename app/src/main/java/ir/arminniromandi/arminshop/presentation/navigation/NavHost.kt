@@ -19,6 +19,8 @@ import androidx.navigation.navArgument
 import ir.arminniromandi.arminshop.presentation.animation.LocalNavAnimatedVisibilityScope
 import ir.arminniromandi.arminshop.presentation.animation.LocalSharedTransitionScope
 import ir.arminniromandi.arminshop.presentation.ui.screens.CartScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.cart.CheckoutScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.cart.MyAddressesScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.EditProfileScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.category.CategoryProductsScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.category.CategoryScreen
@@ -185,7 +187,38 @@ fun MainNavHost(
                                 viewModel = cartViewModel,
                                 onNavigateToHome = {
                                     navController.navigateToTab(ScreensRoute.HomeGraph.route)
+                                },
+                                onNavigateToCheckout = {
+                                    navController.navigate(ScreensRoute.Checkout.route)
                                 }
+                            )
+                        }
+                    }
+
+                    composable(ScreensRoute.Checkout.route) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            CheckoutScreen(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                onNavigateToAddresses = {
+                                    navController.navigate(ScreensRoute.MyAddresses.route)
+                                },
+                                onNavigateToHome = {
+                                    navController.navigateToTab(ScreensRoute.HomeGraph.route)
+                                },
+                                cartViewModel = cartViewModel
+                            )
+                        }
+                    }
+
+                    composable(ScreensRoute.MyAddresses.route) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            MyAddressesScreen(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                cartViewModel = cartViewModel
                             )
                         }
                     }

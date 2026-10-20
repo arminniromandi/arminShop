@@ -81,6 +81,8 @@ sealed class ScreensRoute(val route: String) {
     // ---------------------------------------------------------------------------------------------
 
     data object Cart : ScreensRoute("cart")
+    data object Checkout : ScreensRoute("checkout")
+    data object MyAddresses : ScreensRoute("my_addresses")
 
     // ---------------------------------------------------------------------------------------------
     // Profile tab
