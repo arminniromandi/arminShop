@@ -64,46 +64,11 @@ data class WishlistItemUi(
 @Composable
 fun WishlistScreen(
     onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    wishlistItems: List<WishlistItemUi> = emptyList(),
     onProductClick: (Int) -> Unit = {},
-    onAddToCart: (Int) -> Unit = {},
-    modifier: Modifier = Modifier
+    onAddToCart: (Int) -> Unit = {}
 ) {
-    // Sample items matching Image 2 perfectly
-    val sampleWishlist = listOf(
-        WishlistItemUi(
-            id = 101,
-            title = "ست سویشرت و شلوار مردانه",
-            imageRes = R.drawable.malecloth,
-            discountPercent = 10,
-            mainPrice = 2000000L,
-            finalPrice = 1550000L
-        ),
-        WishlistItemUi(
-            id = 102,
-            title = "ست سویشرت و شلوار مردانه",
-            imageRes = R.drawable.malecloth2,
-            discountPercent = 10,
-            mainPrice = 2000000L,
-            finalPrice = 1550000L
-        ),
-        WishlistItemUi(
-            id = 103,
-            title = "ست سویشرت و شلوار مردانه",
-            imageRes = R.drawable.shirtmale,
-            discountPercent = 0,
-            mainPrice = 2000000L,
-            finalPrice = 1550000L
-        ),
-        WishlistItemUi(
-            id = 104,
-            title = "ست سویشرت و شلوار مردانه",
-            imageRes = R.drawable.bluemancloth,
-            discountPercent = 0,
-            mainPrice = 2000000L,
-            finalPrice = 1550000L
-        )
-    )
-
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
             modifier = modifier
@@ -141,20 +106,37 @@ fun WishlistScreen(
                 )
             }
 
-            // 2-Column Grid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(sampleWishlist, key = { it.id }) { item ->
-                    WishlistCard(
-                        item = item,
-                        onClick = { onProductClick(item.id) },
-                        onAddToCart = { onAddToCart(item.id) }
+            if (wishlistItems.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "هیچ محصولی در لیست علاقه مندی ها وجود ندارد",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = TextGrayColor,
+                            fontSize = 14.sp
+                        )
                     )
+                }
+            } else {
+                // 2-Column Grid
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(wishlistItems, key = { it.id }) { item ->
+                        WishlistCard(
+                            item = item,
+                            onClick = { onProductClick(item.id) },
+                            onAddToCart = { onAddToCart(item.id) }
+                        )
+                    }
                 }
             }
         }

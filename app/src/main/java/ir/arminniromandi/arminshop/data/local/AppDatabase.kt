@@ -23,7 +23,7 @@ import ir.arminniromandi.arminshop.data.local.entity.UserAddressEntity
         OrderEntity::class,
         NotificationEntity::class
     ],
-    version = 4,
+    version = 1,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
