@@ -17,6 +17,7 @@ import ir.arminniromandi.arminshop.data.local.AppDatabase
 import ir.arminniromandi.arminshop.data.local.UserPreferencesDataSource
 import ir.arminniromandi.arminshop.data.local.dao.AddressDao
 import ir.arminniromandi.arminshop.data.local.dao.CartDao
+import ir.arminniromandi.arminshop.data.local.dao.FavoriteDao
 import ir.arminniromandi.arminshop.data.local.dao.NotificationDao
 import ir.arminniromandi.arminshop.data.local.dao.OrderDao
 import ir.arminniromandi.arminshop.data.local.dao.ProductDao
@@ -25,12 +26,14 @@ import ir.arminniromandi.arminshop.data.local.entity.ProductEntity
 import ir.arminniromandi.arminshop.data.mock.MockProducts
 import ir.arminniromandi.arminshop.data.repository.AddressRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.CartRepositoryImpl
+import ir.arminniromandi.arminshop.data.repository.FavoriteRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.NotificationRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.OrderRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.ProductRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.UserRepositoryImpl
 import ir.arminniromandi.arminshop.domain.repository.AddressRepository
 import ir.arminniromandi.arminshop.domain.repository.CartRepository
+import ir.arminniromandi.arminshop.domain.repository.FavoriteRepository
 import ir.arminniromandi.arminshop.domain.repository.NotificationRepository
 import ir.arminniromandi.arminshop.domain.repository.OrderRepository
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
@@ -105,6 +108,11 @@ object AppModule {
     }
 
     @Provides
+    fun provideFavoriteDao(database: AppDatabase): FavoriteDao {
+        return database.favoriteDao()
+    }
+
+    @Provides
     @Singleton
     fun provideProductRepository(productDao: ProductDao): ProductRepository {
         return ProductRepositoryImpl(productDao)
@@ -114,6 +122,12 @@ object AppModule {
     @Singleton
     fun provideCartRepository(cartDao: CartDao): CartRepository {
         return CartRepositoryImpl(cartDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideFavoriteRepository(favoriteDao: FavoriteDao): FavoriteRepository {
+        return FavoriteRepositoryImpl(favoriteDao)
     }
 
     @Provides

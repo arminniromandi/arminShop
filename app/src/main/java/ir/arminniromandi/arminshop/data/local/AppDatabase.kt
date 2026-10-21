@@ -4,10 +4,12 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import ir.arminniromandi.arminshop.data.local.dao.AddressDao
 import ir.arminniromandi.arminshop.data.local.dao.CartDao
+import ir.arminniromandi.arminshop.data.local.dao.FavoriteDao
 import ir.arminniromandi.arminshop.data.local.dao.NotificationDao
 import ir.arminniromandi.arminshop.data.local.dao.OrderDao
 import ir.arminniromandi.arminshop.data.local.dao.ProductDao
 import ir.arminniromandi.arminshop.data.local.entity.CartItemEntity
+import ir.arminniromandi.arminshop.data.local.entity.FavoriteEntity
 import ir.arminniromandi.arminshop.data.local.entity.NotificationEntity
 import ir.arminniromandi.arminshop.data.local.entity.OrderEntity
 import ir.arminniromandi.arminshop.data.local.entity.ProductCommentEntity
@@ -21,9 +23,10 @@ import ir.arminniromandi.arminshop.data.local.entity.UserAddressEntity
         CartItemEntity::class,
         UserAddressEntity::class,
         OrderEntity::class,
-        NotificationEntity::class
+        NotificationEntity::class,
+        FavoriteEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -32,4 +35,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun addressDao(): AddressDao
     abstract fun orderDao(): OrderDao
     abstract fun notificationDao(): NotificationDao
+    abstract fun favoriteDao(): FavoriteDao
 }
