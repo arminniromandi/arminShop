@@ -13,20 +13,30 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import ir.arminniromandi.arminshop.R
 import ir.arminniromandi.arminshop.data.local.AppDatabase
 import ir.arminniromandi.arminshop.data.local.UserPreferencesDataSource
 import ir.arminniromandi.arminshop.data.local.dao.AddressDao
 import ir.arminniromandi.arminshop.data.local.dao.CartDao
+import ir.arminniromandi.arminshop.data.local.dao.NotificationDao
+import ir.arminniromandi.arminshop.data.local.dao.OrderDao
 import ir.arminniromandi.arminshop.data.local.dao.ProductDao
+import ir.arminniromandi.arminshop.data.local.entity.NotificationEntity
+import ir.arminniromandi.arminshop.data.local.entity.OrderEntity
 import ir.arminniromandi.arminshop.data.local.entity.ProductCommentEntity
 import ir.arminniromandi.arminshop.data.local.entity.ProductEntity
+import ir.arminniromandi.arminshop.data.local.entity.UserAddressEntity
 import ir.arminniromandi.arminshop.data.mock.MockProducts
 import ir.arminniromandi.arminshop.data.repository.AddressRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.CartRepositoryImpl
+import ir.arminniromandi.arminshop.data.repository.NotificationRepositoryImpl
+import ir.arminniromandi.arminshop.data.repository.OrderRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.ProductRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.UserRepositoryImpl
 import ir.arminniromandi.arminshop.domain.repository.AddressRepository
 import ir.arminniromandi.arminshop.domain.repository.CartRepository
+import ir.arminniromandi.arminshop.domain.repository.NotificationRepository
+import ir.arminniromandi.arminshop.domain.repository.OrderRepository
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
 import ir.arminniromandi.arminshop.domain.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
@@ -60,7 +70,7 @@ object AppModule {
     @Singleton
     fun provideAppDatabase(
         @ApplicationContext context: Context,
-        productDaoProvider: Provider<ProductDao>
+        databaseProvider: Provider<AppDatabase>
     ): AppDatabase {
         return Room.databaseBuilder(
             context,
@@ -71,8 +81,16 @@ object AppModule {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
                 CoroutineScope(Dispatchers.IO).launch {
-                    val dao = productDaoProvider.get()
-                    seedMockProducts(dao)
+                    val appDb = databaseProvider.get()
+                    seedInitialData(appDb)
+                }
+            }
+
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                super.onOpen(db)
+                CoroutineScope(Dispatchers.IO).launch {
+                    val appDb = databaseProvider.get()
+                    seedInitialDataIfNeeded(appDb)
                 }
             }
         }).build()
@@ -111,6 +129,48 @@ object AppModule {
         return AddressRepositoryImpl(addressDao)
     }
 
+    @Provides
+    fun provideOrderDao(database: AppDatabase): OrderDao {
+        return database.orderDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOrderRepository(orderDao: OrderDao): OrderRepository {
+        return OrderRepositoryImpl(orderDao)
+    }
+
+    @Provides
+    fun provideNotificationDao(database: AppDatabase): NotificationDao {
+        return database.notificationDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotificationRepository(notificationDao: NotificationDao): NotificationRepository {
+        return NotificationRepositoryImpl(notificationDao)
+    }
+
+    private fun seedInitialData(database: AppDatabase) {
+        seedMockProducts(database.productDao())
+        seedInitialAddresses(database.addressDao())
+        seedInitialOrders(database.orderDao())
+        seedInitialNotifications(database.notificationDao())
+    }
+
+    private fun seedInitialDataIfNeeded(database: AppDatabase) {
+        if (database.productDao().getProductsCount() == 0) {
+            seedMockProducts(database.productDao())
+        }
+        seedInitialAddresses(database.addressDao())
+        if (database.orderDao().getOrdersCount() == 0) {
+            seedInitialOrders(database.orderDao())
+        }
+        if (database.notificationDao().getNotificationsCount() == 0) {
+            seedInitialNotifications(database.notificationDao())
+        }
+    }
+
     private fun seedMockProducts(dao: ProductDao) {
         val sampleProducts = MockProducts.sampleProducts
 
@@ -146,5 +206,109 @@ object AppModule {
 
         dao.insertProducts(productEntities)
         dao.insertComments(commentEntities)
+    }
+
+    private fun seedInitialAddresses(dao: AddressDao) {
+        val existing = dao.getAddressById(1L)
+        if (existing == null) {
+            dao.insertAddress(
+                UserAddressEntity(
+                    id = 1L,
+                    recipientName = "محمد عزیزی",
+                    fullAddress = "بیرجند-غفاری ۱۶-پلاک ۲۵",
+                    postalCode = "۹۸۷۴۳۶۵۳۷۴",
+                    phoneNumber = "۰۹۱۱۱۱۱۱۱۱۱",
+                    isDefault = true
+                )
+            )
+            dao.insertAddress(
+                UserAddressEntity(
+                    id = 2L,
+                    recipientName = "الهه لطفی",
+                    fullAddress = "بیرجند- توحید ۱۶-پلاک ۲۵",
+                    postalCode = "۹۸۷۴۳۶۵۳۷۴",
+                    phoneNumber = "۰۹۱۱۱۱۱۱۱۱۱",
+                    isDefault = false
+                )
+            )
+        }
+    }
+
+    private fun seedInitialOrders(dao: OrderDao) {
+        val initialOrders = listOf(
+            OrderEntity(
+                orderCode = "۱۲۳۶۴",
+                orderDate = "۲۶ مهر ۱۴۰۲",
+                productId = 1,
+                productName = "ست سویشرت و شلوار مردانه",
+                productImageRes = R.drawable.malecloth,
+                price = 1550000L,
+                quantity = 1,
+                isPaymentSuccess = true,
+                hasCommented = false
+            ),
+            OrderEntity(
+                orderCode = "۱۲۳۶۴",
+                orderDate = "۲۶ مهر ۱۴۰۲",
+                productId = 3,
+                productName = "ست سویشرت و شلوار مردانه ست سویشرت و شلوار مردانه",
+                productImageRes = R.drawable.malecloth2,
+                price = 1550000L,
+                quantity = 1,
+                isPaymentSuccess = true,
+                hasCommented = true,
+                commentRating = 3f,
+                commentText = null
+            ),
+            OrderEntity(
+                orderCode = "۱۲۳۶۴",
+                orderDate = "۲۶ مهر ۱۴۰۲",
+                productId = 2,
+                productName = "ست سویشرت و شلوار مردانه",
+                productImageRes = R.drawable.shirtmale,
+                price = 1550000L,
+                quantity = 1,
+                isPaymentSuccess = false,
+                hasCommented = true,
+                commentRating = 4.5f,
+                commentText = "عالی بود، از نظر جنس و کیفیت خیلی خوب بود و دقیقا شبیه به عکس بود"
+            ),
+            OrderEntity(
+                orderCode = "۱۲۳۶۴",
+                orderDate = "۲۶ مهر ۱۴۰۲",
+                productId = 7,
+                productName = "پیراهن کتان آبی",
+                productImageRes = R.drawable.bluemancloth,
+                price = 1550000L,
+                quantity = 1,
+                isPaymentSuccess = true,
+                hasCommented = true,
+                commentRating = 4.5f,
+                commentText = "عالی بود، از نظر جنس و کیفیت بسیار خوب بود و دقیقا شبیه عکس بود"
+            )
+        )
+        dao.insertOrders(initialOrders)
+    }
+
+    private fun seedInitialNotifications(dao: NotificationDao) {
+        val initialNotifications = listOf(
+            NotificationEntity(
+                title = "ثبت موفق سفارش",
+                sender = "فروشگاه",
+                date = "۲۶ مهر ۱۴۰۲",
+                message = "متن اعلان در اینجا نوشته می شود. سفارش شما با کد پیگیری ۱۲۳۶۴ ثبت گردید. این اعلان شامل اطلاعات تحویل کالا است.",
+                isRead = false,
+                orderCode = "۱۲۳۶۴"
+            ),
+            NotificationEntity(
+                title = "ثبت موفق سفارش",
+                sender = "فروشگاه",
+                date = "۲۶ مهر ۱۴۰۲",
+                message = "سفارش شما با کد پیگیری ۱۲۳۶۰ با موفقیت در فروشگاه ثبت شد و به زودی ارسال می‌گردد.",
+                isRead = true,
+                orderCode = "۱۲۳۶۰"
+            )
+        )
+        dao.insertNotifications(initialNotifications)
     }
 }

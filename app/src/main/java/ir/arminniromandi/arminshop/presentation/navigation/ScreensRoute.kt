@@ -89,6 +89,10 @@ sealed class ScreensRoute(val route: String) {
     // ---------------------------------------------------------------------------------------------
 
     data object Profile : ScreensRoute("profile")
-
     data object EditProfile : ScreensRoute("edit_profile")
+    data object MyOrders : ScreensRoute("my_orders")
+    data object Wishlist : ScreensRoute("wishlist")
+    data object Notifications : ScreensRoute("notifications")
+    data object MyExperiences : ScreensRoute("my_experiences")
 }
+

@@ -19,16 +19,20 @@ import androidx.navigation.navArgument
 import ir.arminniromandi.arminshop.presentation.animation.LocalNavAnimatedVisibilityScope
 import ir.arminniromandi.arminshop.presentation.animation.LocalSharedTransitionScope
 import ir.arminniromandi.arminshop.presentation.ui.screens.CartScreen
-import ir.arminniromandi.arminshop.presentation.ui.screens.cart.CheckoutScreen
-import ir.arminniromandi.arminshop.presentation.ui.screens.cart.MyAddressesScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.EditProfileScreen
-import ir.arminniromandi.arminshop.presentation.ui.screens.category.CategoryProductsScreen
-import ir.arminniromandi.arminshop.presentation.ui.screens.category.CategoryScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.HomeScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.LoginScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.ProductDetailScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.ProfileScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.SearchScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.cart.CheckoutScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.cart.MyAddressesScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.category.CategoryProductsScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.category.CategoryScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.experiences.MyExperiencesScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.notifications.NotificationsScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.orders.MyOrdersScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.wishlist.WishlistScreen
 import ir.arminniromandi.arminshop.presentation.viewmodels.CartSharedViewModel
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -65,8 +69,7 @@ fun MainNavHost(
                     }
                 }
 
-                // Product detail is reachable from the home, search and category products
-                // destinations, so it is registered once at the root of the graph.
+                // Product detail is reachable from home, search, category products, etc.
                 composable(
                     route = ScreensRoute.ProductDetail.route,
                     arguments = listOf(
@@ -84,6 +87,18 @@ fun MainNavHost(
                             onAddToCart = { product ->
                                 cartViewModel.addToCart(product)
                             }
+                        )
+                    }
+                }
+
+                // Shared MyAddresses screen reachable from Checkout and Profile
+                composable(ScreensRoute.MyAddresses.route) {
+                    CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                        MyAddressesScreen(
+                            onNavigateBack = {
+                                navController.popBackStack()
+                            },
+                            cartViewModel = cartViewModel
                         )
                     }
                 }
@@ -175,8 +190,9 @@ fun MainNavHost(
                     }
                 }
 
+                // ---------------------------------------------------------------------------------
                 // Cart tab
-
+                // ---------------------------------------------------------------------------------
                 navigation(
                     route = ScreensRoute.CartGraph.route,
                     startDestination = ScreensRoute.Cart.route
@@ -211,17 +227,6 @@ fun MainNavHost(
                             )
                         }
                     }
-
-                    composable(ScreensRoute.MyAddresses.route) {
-                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
-                            MyAddressesScreen(
-                                onNavigateBack = {
-                                    navController.popBackStack()
-                                },
-                                cartViewModel = cartViewModel
-                            )
-                        }
-                    }
                 }
 
                 // ---------------------------------------------------------------------------------
@@ -241,8 +246,7 @@ fun MainNavHost(
                                     // Action for change avatar
                                 },
                                 onMenuItemClick = { item ->
-
-                                    // Handle item click
+                                    item.onClick(navController)
                                 }
                             )
                         }
@@ -251,6 +255,52 @@ fun MainNavHost(
                     composable(ScreensRoute.EditProfile.route) {
                         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
                             EditProfileScreen(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                    }
+
+                    composable(ScreensRoute.MyOrders.route) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            MyOrdersScreen(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                    }
+
+                    composable(ScreensRoute.Wishlist.route) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            WishlistScreen(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                onProductClick = { productId ->
+                                    navController.navigate(ScreensRoute.ProductDetail.createRoute(productId))
+                                },
+                                onAddToCart = { productId ->
+                                    // Add to cart callback
+                                }
+                            )
+                        }
+                    }
+
+                    composable(ScreensRoute.Notifications.route) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            NotificationsScreen(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                    }
+
+                    composable(ScreensRoute.MyExperiences.route) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            MyExperiencesScreen(
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 }

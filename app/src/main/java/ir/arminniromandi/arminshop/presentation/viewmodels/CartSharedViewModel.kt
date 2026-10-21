@@ -4,10 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ir.arminniromandi.arminshop.data.local.entity.CartItemEntity
+import ir.arminniromandi.arminshop.data.local.entity.NotificationEntity
+import ir.arminniromandi.arminshop.data.local.entity.OrderEntity
 import ir.arminniromandi.arminshop.domain.model.Product
 import ir.arminniromandi.arminshop.domain.model.UserAddress
 import ir.arminniromandi.arminshop.domain.repository.AddressRepository
 import ir.arminniromandi.arminshop.domain.repository.CartRepository
+import ir.arminniromandi.arminshop.domain.repository.NotificationRepository
+import ir.arminniromandi.arminshop.domain.repository.OrderRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +36,9 @@ data class OrderSuccessInfo(
 @HiltViewModel
 class CartSharedViewModel @Inject constructor(
     private val cartRepository: CartRepository,
-    private val addressRepository: AddressRepository
+    private val addressRepository: AddressRepository,
+    private val orderRepository: OrderRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     val shippingFee: Long = 100_000L
@@ -141,15 +147,51 @@ class CartSharedViewModel @Inject constructor(
     }
 
     /**
-     * Completes checkout: clears cart in Room database and posts payment success.
+     * Completes checkout:
+     * 1. Saves purchased items into orders table in Room database
+     * 2. Adds notification into notifications table in Room database
+     * 3. Clears cart in Room database and posts payment success.
      */
     fun completePayment(deliveryAddress: UserAddress) {
         val total = grandTotal.value
         val count = cartTotalCount.value
-        val trackingCode = "#SH-${Random.nextInt(100000, 999999)}"
+        val rawCode = Random.nextInt(10000, 99999).toString()
+        val trackingCode = "#SH-$rawCode"
+        val currentItems = cartItems.value
 
         viewModelScope.launch {
+            // Save each item as an order entity
+            if (currentItems.isNotEmpty()) {
+                val orderEntities = currentItems.map { item ->
+                    OrderEntity(
+                        orderCode = rawCode,
+                        orderDate = "۲۶ مهر ۱۴۰۲",
+                        productId = item.productId,
+                        productName = item.name,
+                        productImageRes = item.imageRes,
+                        price = item.price,
+                        quantity = item.quantity,
+                        isPaymentSuccess = true,
+                        hasCommented = false
+                    )
+                }
+                orderRepository.addOrders(orderEntities)
+            }
+
+            // Save order registration notification into database
+            val notification = NotificationEntity(
+                title = "ثبت موفق سفارش",
+                sender = "فروشگاه",
+                date = "۲۶ مهر ۱۴۰۲",
+                message = "سفارش شما با کد پیگیری $rawCode با موفقیت در فروشگاه ثبت شد و در حال آماده‌سازی می‌باشد.",
+                isRead = false,
+                orderCode = rawCode
+            )
+            notificationRepository.addNotification(notification)
+
+            // Clear the cart
             cartRepository.clearCart()
+
             _orderSuccessInfo.value = OrderSuccessInfo(
                 orderTrackingCode = trackingCode,
                 totalAmount = total,

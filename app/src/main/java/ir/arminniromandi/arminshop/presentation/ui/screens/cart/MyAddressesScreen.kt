@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -27,7 +26,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
@@ -44,7 +42,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,14 +61,15 @@ import ir.arminniromandi.arminshop.presentation.viewmodels.CartSharedViewModel
 fun MyAddressesScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    isSelectionMode: Boolean = false,
     cartViewModel: CartSharedViewModel = hiltViewModel(),
     addressViewModel: AddressViewModel = hiltViewModel()
 ) {
+    // Collect directly from database (Room via AddressViewModel)
     val addresses by addressViewModel.addresses.collectAsStateWithLifecycle()
     val defaultAddress by addressViewModel.defaultAddress.collectAsStateWithLifecycle()
     val currentSelectedAddress by addressViewModel.selectedAddress.collectAsStateWithLifecycle()
 
-    // Determine currently highlighted address
     val activeSelectedAddress = currentSelectedAddress ?: defaultAddress ?: addresses.firstOrNull()
 
     var isBottomSheetOpen by remember { mutableStateOf(false) }
@@ -84,11 +82,11 @@ fun MyAddressesScreen(
                 .background(ScreenBackground)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Header with Back Arrow and Title "آدرس های من" (Image 3 style)
+            // Header with Back Arrow and Title "آدرس های من" (Image 4 style)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 6.dp),
+                    .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
@@ -98,7 +96,7 @@ fun MyAddressesScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = "بازگشت",
-                        tint = PrimaryOrangeRed
+                        tint = TextDarkColor
                     )
                 }
 
@@ -109,110 +107,135 @@ fun MyAddressesScreen(
                     style = MaterialTheme.typography.titleLarge.copy(
                         color = TextDarkColor,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 19.sp
+                        fontSize = 20.sp
                     )
                 )
             }
 
-            // Subtitle
-            Text(
-                text = "آدرس مورد نظر خود را انتخاب کنید.",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = TextGrayColor,
-                    fontSize = 12.sp
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 14.dp, end = 4.dp)
-            )
-
-            // Address List
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                contentPadding = PaddingValues(bottom = 12.dp)
-            ) {
-                items(addresses, key = { it.id }) { address ->
-                    val isSelected = activeSelectedAddress?.id == address.id
-
-                    AddressSelectionCard(
-                        address = address,
-                        isSelected = isSelected,
-                        onSelect = {
-                            addressViewModel.selectAddress(address)
-                            cartViewModel.selectAddress(address)
-                        },
-                        onSetDefault = {
-                            addressViewModel.setDefaultAddress(address.id)
-                            cartViewModel.selectAddress(address)
-                        },
-                        onEdit = {
-                            addressToEdit = address
-                            isBottomSheetOpen = true
-                        },
-                        onDelete = {
-                            addressViewModel.deleteAddress(address.id)
-                        }
+            // Address List from Room Database
+            if (addresses.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "هیچ آدرسی در دیتابیس ثبت نشده است",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = TextGrayColor,
+                            fontSize = 14.sp
+                        )
                     )
                 }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(bottom = 12.dp)
+                ) {
+                    items(addresses, key = { it.id }) { address ->
+                        val isSelected = (address.isDefault) || (activeSelectedAddress?.id == address.id)
 
-                // Add New Address Button (Outlined button)
-                item {
-                    OutlinedButton(
+                        AddressSelectionCard(
+                            address = address,
+                            isSelected = isSelected,
+                            onSelect = {
+                                addressViewModel.selectAddress(address)
+                                cartViewModel.selectAddress(address)
+                            },
+                            onSetDefault = {
+                                addressViewModel.setDefaultAddress(address.id)
+                                cartViewModel.selectAddress(address)
+                            },
+                            onEdit = {
+                                addressToEdit = address
+                                isBottomSheetOpen = true
+                            },
+                            onDelete = {
+                                addressViewModel.deleteAddress(address.id)
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Sticky Bottom Button: "+ ثبت آدرس جدید" (Image 4 design)
+            if (isSelectionMode) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (activeSelectedAddress != null) {
+                                cartViewModel.selectAddress(activeSelectedAddress)
+                            }
+                            onNavigateBack()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrangeRed),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                    ) {
+                        Text(
+                            text = "انتخاب و ادامه خرید",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        )
+                    }
+
+                    Button(
                         onClick = {
                             addressToEdit = null
                             isBottomSheetOpen = true
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.dp, PrimaryOrangeRed.copy(alpha = 0.7f)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color(0xFFFFF7F4),
-                            contentColor = PrimaryOrangeRed
-                        )
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF0EC)),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.height(50.dp)
                     ) {
                         Text(
-                            text = "+ ثبت آدرس جدید",
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.Bold,
+                            text = "+ آدرس جدید",
+                            style = MaterialTheme.typography.titleMedium.copy(
                                 color = PrimaryOrangeRed,
+                                fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
                         )
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Sticky Bottom Button: "انتخاب آدرس و ادامه خرید"
-            Button(
-                onClick = {
-                    if (activeSelectedAddress != null) {
-                        cartViewModel.selectAddress(activeSelectedAddress)
-                    }
-                    onNavigateBack()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrangeRed),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-            ) {
-                Text(
-                    text = "انتخاب آدرس و ادامه خرید",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+            } else {
+                // Solid Orange "+ ثبت آدرس جدید" button matching Image 4
+                Button(
+                    onClick = {
+                        addressToEdit = null
+                        isBottomSheetOpen = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrangeRed),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(
+                        text = "+ ثبت آدرس جدید",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
                     )
-                )
+                }
             }
         }
 
-        // Add / Edit Address Bottom Sheet
+        // Add / Edit Address Bottom Sheet (saves directly to Room database)
         AddEditAddressBottomSheet(
             isOpen = isBottomSheetOpen,
             addressToEdit = addressToEdit,
@@ -240,9 +263,9 @@ fun MyAddressesScreen(
 }
 
 /**
- * Address card matching Image 3:
+ * Address card matching Image 4:
  * - Shows recipient, address, postal code, phone number
- * - Highlight border if selected
+ * - Highlight border if default or selected
  * - Horizontal divider
  * - Bottom row: Default radio button, Edit button, Delete button
  */

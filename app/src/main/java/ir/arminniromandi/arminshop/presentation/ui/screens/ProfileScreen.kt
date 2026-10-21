@@ -30,7 +30,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -41,17 +40,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import ir.arminniromandi.arminshop.R
 import ir.arminniromandi.arminshop.presentation.components.UserInfoTopProfile
+import ir.arminniromandi.arminshop.presentation.model.ProfileMenuItem
 import ir.arminniromandi.arminshop.presentation.ui.theme.ArminShopTheme
 import ir.arminniromandi.arminshop.presentation.ui.theme.ScreenBackground
 import ir.arminniromandi.arminshop.presentation.viewmodels.ProfileViewModel
-
-data class ProfileMenuItem(
-    val title: String,
-    val icon: Painter,
-    val onClick: () -> Unit = {}
-)
+import ir.arminniromandi.arminshop.utils.Constance
 
 @Composable
 fun ProfileScreen(
@@ -63,8 +57,8 @@ fun ProfileScreen(
 ) {
     val user by viewModel.user.collectAsStateWithLifecycle()
 
-    val userName = user?.fullName?.ifBlank { "آرمین نیرومندی" } ?: "آرمین نیرومندی"
-    val phoneNumber = user?.phoneNumber?.ifBlank { "۰۹۳۰۰۳۱۸۲۳۹" } ?: "۰۹۳۰۰۳۱۸۲۳۹"
+    val userName = user?.fullName?.ifBlank { "" } ?: ""
+    val phoneNumber = user?.phoneNumber?.ifBlank { "" } ?: ""
 
     ProfileScreenContent(
         modifier = modifier,
@@ -81,39 +75,12 @@ fun ProfileScreenContent(
     modifier: Modifier = Modifier,
     userName: String = "",
     phoneNumber: String = "",
+    menuItems: List<ProfileMenuItem> = Constance.profileMenuItems,
     onEditProfileClick: () -> Unit = {},
     onChangeAvatarClick: () -> Unit = {},
     onMenuItemClick: (ProfileMenuItem) -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
-
-    // 6 profile options matching the design in the 2-column grid
-    val menuItems = listOf(
-        ProfileMenuItem(
-            title = "سفارشات من",
-            icon = painterResource(R.drawable.shopping_cart)
-        ),
-        ProfileMenuItem(
-            title = "تجربه های خرید من",
-            icon = painterResource(R.drawable.exprience)
-        ),
-        ProfileMenuItem(
-            title = "تغییر رمز عبور",
-            icon = painterResource(R.drawable.password_change)
-        ),
-        ProfileMenuItem(
-            title = "اعلانات من",
-            icon = painterResource(R.drawable.notification)
-        ),
-        ProfileMenuItem(
-            title = "علاقه مندی های من",
-            icon = painterResource(R.drawable.bookmark),
-        ),
-        ProfileMenuItem(
-            title = "آدرس های من",
-            icon = painterResource(R.drawable.location),
-        )
-    )
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
@@ -150,7 +117,6 @@ fun ProfileScreenContent(
                                 ProfileActionCard(
                                     item = item,
                                     onClick = {
-                                        item.onClick()
                                         onMenuItemClick(item)
                                     }
                                 )
@@ -213,7 +179,7 @@ fun ProfileActionCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = item.icon,
+                    painter = painterResource(item.iconRes),
                     contentDescription = item.title,
                     tint = Color.Unspecified,
                     modifier = Modifier.size(46.dp)
