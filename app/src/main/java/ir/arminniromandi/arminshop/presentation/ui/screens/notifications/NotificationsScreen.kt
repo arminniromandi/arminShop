@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -56,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.data.local.entity.NotificationEntity
+import ir.arminniromandi.arminshop.presentation.components.TopInfoMinify
 import ir.arminniromandi.arminshop.presentation.ui.theme.PrimaryOrangeRed
 import ir.arminniromandi.arminshop.presentation.ui.theme.ScreenBackground
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextDarkColor
@@ -67,109 +69,113 @@ import ir.arminniromandi.arminshop.presentation.viewmodels.NotificationsViewMode
 fun NotificationsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    userName: String = "بدون نام",
+    phoneNumber: String = "شماره ای ثبت نشده.",
     viewModel: NotificationsViewModel = hiltViewModel()
 ) {
     val notifications by viewModel.filteredNotifications.collectAsStateWithLifecycle()
     val activeFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .background(ScreenBackground)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Header: Back icon and Title "اعلانات من"
-            Row(
+            // Top Mini Profile Banner
+            TopInfoMinify(
+                userName = userName,
+                phoneNumber = phoneNumber
+            )
+
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
             ) {
-                IconButton(
-                    onClick = onNavigateBack,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "بازگشت",
-                        tint = TextDarkColor
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Text(
-                    text = "اعلانات من",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        color = TextDarkColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                )
-            }
-
-            // Top Filter Options: "خوانده نشده" and "خوانده شده" (Image 3 style)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp, start = 4.dp, end = 4.dp),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // "خوانده نشده" filter
-                FilterCheckbox(
-                    label = "خوانده نشده",
-                    isChecked = activeFilter == NotificationFilter.UNREAD,
-                    onClick = { viewModel.setFilter(NotificationFilter.UNREAD) }
-                )
-
-                Spacer(modifier = Modifier.width(28.dp))
-
-                // "خوانده شده" filter
-                FilterCheckbox(
-                    label = "خوانده شده",
-                    isChecked = activeFilter == NotificationFilter.READ,
-                    onClick = { viewModel.setFilter(NotificationFilter.READ) }
-                )
-            }
-
-            if (notifications.isEmpty()) {
-                Box(
+                // Header: Back icon and Title "اعلانات من"
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(bottom = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+
+
+
                     Text(
-                        text = "هیچ اعلانی یافت نشد",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = TextGrayColor,
-                            fontSize = 14.sp
+                        text = "اعلانات من",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            color = TextDarkColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
                         )
                     )
+
+
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
+
+                // Top Filter Options: "خوانده نشده" and "خوانده شده" (Image 3 style)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp, start = 4.dp, end = 4.dp),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(notifications, key = { it.id }) { notification ->
-                        NotificationCard(
-                            notification = notification,
-                            onExpand = {
-                                if (!notification.isRead) {
-                                    viewModel.markAsRead(notification.id)
-                                }
-                            }
+                    // "خوانده نشده" filter
+                    FilterCheckbox(
+                        label = "خوانده نشده",
+                        isChecked = activeFilter == NotificationFilter.UNREAD,
+                        onClick = { viewModel.setFilter(NotificationFilter.UNREAD) }
+                    )
+
+                    Spacer(modifier = Modifier.width(28.dp))
+
+                    // "خوانده شده" filter
+                    FilterCheckbox(
+                        label = "خوانده شده",
+                        isChecked = activeFilter == NotificationFilter.READ,
+                        onClick = { viewModel.setFilter(NotificationFilter.READ) }
+                    )
+                }
+
+                if (notifications.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "هیچ اعلانی یافت نشد",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = TextGrayColor,
+                                fontSize = 14.sp
+                            )
                         )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(notifications, key = { it.id }) { notification ->
+                            NotificationCard(
+                                notification = notification,
+                                onExpand = {
+                                    if (!notification.isRead) {
+                                        viewModel.markAsRead(notification.id)
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
     }
-}
+
 
 @Composable
 private fun FilterCheckbox(

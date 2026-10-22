@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.data.local.entity.OrderEntity
+import ir.arminniromandi.arminshop.presentation.components.TopInfoMinify
 import ir.arminniromandi.arminshop.presentation.components.formatPersianPrice
 import ir.arminniromandi.arminshop.presentation.ui.theme.PrimaryOrangeRed
 import ir.arminniromandi.arminshop.presentation.ui.theme.ScreenBackground
@@ -67,77 +69,78 @@ import ir.arminniromandi.arminshop.presentation.viewmodels.MyExperiencesViewMode
 fun MyExperiencesScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    userName: String = "بدون نام",
+    phoneNumber: String = "شماره ای ثبت نشده.",
     viewModel: MyExperiencesViewModel = hiltViewModel()
 ) {
     val orders by viewModel.orders.collectAsStateWithLifecycle()
 
     var activeOrderForComment by remember { mutableStateOf<OrderEntity?>(null) }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .background(ScreenBackground)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Header with Back icon and Title "تجربه‌های خرید من"
-            Row(
+            // Top Mini Profile Banner
+            TopInfoMinify(
+                userName = userName,
+                phoneNumber = phoneNumber
+            )
+
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
             ) {
-                IconButton(
-                    onClick = onNavigateBack,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "بازگشت",
-                        tint = TextDarkColor
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Text(
-                    text = "تجربه های خرید من",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        color = TextDarkColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                )
-            }
-
-            if (orders.isEmpty()) {
-                Box(
+                // Header with Back icon and Title "تجربه‌های خرید من"
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+
                     Text(
-                        text = "محصول خریداری‌شده‌ای برای ثبت تجربه یافت نشد",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = TextGrayColor,
-                            fontSize = 14.sp
+                        text = "تجربه های خرید من",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            color = TextDarkColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
                         )
                     )
+
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(orders, key = { it.id }) { order ->
-                        ExperienceItemCard(
-                            order = order,
-                            onSubmitCommentClick = {
-                                activeOrderForComment = order
-                            }
+
+                if (orders.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "محصول خریداری‌شده‌ای برای ثبت تجربه یافت نشد",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = TextGrayColor,
+                                fontSize = 14.sp
+                            )
                         )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(orders, key = { it.id }) { order ->
+                            ExperienceItemCard(
+                                order = order,
+                                onSubmitCommentClick = {
+                                    activeOrderForComment = order
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -162,7 +165,7 @@ fun MyExperiencesScreen(
             )
         }
     }
-}
+
 
 @Composable
 private fun ExperienceItemCard(

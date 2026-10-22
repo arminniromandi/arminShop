@@ -29,11 +29,6 @@ object Constance {
             }
         ),
         ProfileMenuItem(
-            title = "تغییر رمز عبور",
-            iconRes = R.drawable.password_change,
-            onClick = { _ -> }
-        ),
-        ProfileMenuItem(
             title = "اعلانات من",
             iconRes = R.drawable.notification,
             onClick = { navController ->
@@ -51,7 +46,7 @@ object Constance {
             title = "آدرس های من",
             iconRes = R.drawable.location,
             onClick = { navController ->
-                navController.navigate(ScreensRoute.MyAddresses.route)
+                navController.navigate(ScreensRoute.ProfileAddresses.route)
             }
         )
     )

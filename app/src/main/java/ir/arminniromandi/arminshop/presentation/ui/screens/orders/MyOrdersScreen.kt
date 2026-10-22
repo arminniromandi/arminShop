@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.data.local.entity.OrderEntity
+import ir.arminniromandi.arminshop.presentation.components.TopInfoMinify
 import ir.arminniromandi.arminshop.presentation.components.formatPersianPrice
 import ir.arminniromandi.arminshop.presentation.ui.theme.ScreenBackground
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextDarkColor
@@ -51,76 +52,77 @@ import ir.arminniromandi.arminshop.presentation.viewmodels.MyOrdersViewModel
 fun MyOrdersScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    userName: String = "بدون نام",
+    phoneNumber: String = "شماره ای ثبت نشده.",
     viewModel: MyOrdersViewModel = hiltViewModel()
 ) {
     val orders by viewModel.orders.collectAsStateWithLifecycle()
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .background(ScreenBackground)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Header: Back icon and Title "سفارشات من"
-            Row(
+            // Top Mini Profile Banner
+            TopInfoMinify(
+                userName = userName,
+                phoneNumber = phoneNumber
+            )
+
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
             ) {
-                IconButton(
-                    onClick = onNavigateBack,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "بازگشت",
-                        tint = TextDarkColor
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Text(
-                    text = "سفارشات من",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        color = TextDarkColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                )
-            }
-
-            if (orders.isEmpty()) {
-                Box(
+                // Header: Back icon and Title "سفارشات من"
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "هیچ سفارشی یافت نشد",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = TextGrayColor,
-                            fontSize = 15.sp
+                        text = "سفارشات من",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            color = TextDarkColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
                         )
                     )
+
+
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(orders, key = { it.id }) { order ->
-                        OrderItemCard(order = order)
+
+                if (orders.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "هیچ سفارشی یافت نشد",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = TextGrayColor,
+                                fontSize = 15.sp
+                            )
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(orders, key = { it.id }) { order ->
+                            OrderItemCard(order = order)
+                        }
                     }
                 }
             }
         }
     }
-}
+
 
 @Composable
 private fun OrderItemCard(

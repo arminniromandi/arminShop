@@ -1,5 +1,6 @@
 package ir.arminniromandi.arminshop.presentation.navigation
 
+import android.util.Log
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
@@ -9,7 +10,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -32,8 +36,10 @@ import ir.arminniromandi.arminshop.presentation.ui.screens.category.CategoryScre
 import ir.arminniromandi.arminshop.presentation.ui.screens.experiences.MyExperiencesScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.notifications.NotificationsScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.orders.MyOrdersScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.profile.ProfileAddressesScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.wishlist.WishlistScreen
 import ir.arminniromandi.arminshop.presentation.viewmodels.CartSharedViewModel
+import ir.arminniromandi.arminshop.presentation.viewmodels.ProfileViewModel
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -43,6 +49,11 @@ fun MainNavHost(
     cartViewModel: CartSharedViewModel,
     startDestination: String = ScreensRoute.HomeGraph.route
 ) {
+    val profileViewModel: ProfileViewModel = hiltViewModel()
+    val user by profileViewModel.user.collectAsStateWithLifecycle()
+    val userName = user?.fullName?.ifBlank { "آرمین نیرومندی" } ?: "آرمین نیرومندی"
+    val phoneNumber = user?.phoneNumber?.ifBlank { "۰۹۳۰۰۳۱۸۲۳۹" } ?: "۰۹۳۰۰۳۱۸۲۳۹"
+
     SharedTransitionLayout {
         CompositionLocalProvider(LocalSharedTransitionScope provides this) {
             NavHost(
@@ -91,13 +102,14 @@ fun MainNavHost(
                     }
                 }
 
-                // Shared MyAddresses screen reachable from Checkout and Profile
+                // Checkout MyAddresses screen (dedicated for purchase selection)
                 composable(ScreensRoute.MyAddresses.route) {
                     CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
                         MyAddressesScreen(
                             onNavigateBack = {
                                 navController.popBackStack()
                             },
+                            isSelectionMode = true,
                             cartViewModel = cartViewModel
                         )
                     }
@@ -236,6 +248,7 @@ fun MainNavHost(
                     route = ScreensRoute.ProfileGraph.route,
                     startDestination = ScreensRoute.Profile.route
                 ) {
+                    Log.i("test", "profile added")
                     composable(ScreensRoute.Profile.route) {
                         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
                             ProfileScreen(
@@ -267,7 +280,9 @@ fun MainNavHost(
                             MyOrdersScreen(
                                 onNavigateBack = {
                                     navController.popBackStack()
-                                }
+                                },
+                                userName = userName,
+                                phoneNumber = phoneNumber
                             )
                         }
                     }
@@ -278,11 +293,13 @@ fun MainNavHost(
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 },
+                                userName = userName,
+                                phoneNumber = phoneNumber,
                                 onProductClick = { productId ->
                                     navController.navigate(ScreensRoute.ProductDetail.createRoute(productId))
                                 },
-                                onAddToCart = { productId ->
-                                    // Add to cart callback
+                                onAddToCart = { product ->
+                                    cartViewModel.addToCart(product)
                                 }
                             )
                         }
@@ -293,7 +310,9 @@ fun MainNavHost(
                             NotificationsScreen(
                                 onNavigateBack = {
                                     navController.popBackStack()
-                                }
+                                },
+                                userName = userName,
+                                phoneNumber = phoneNumber
                             )
                         }
                     }
@@ -303,7 +322,21 @@ fun MainNavHost(
                             MyExperiencesScreen(
                                 onNavigateBack = {
                                     navController.popBackStack()
-                                }
+                                },
+                                userName = userName,
+                                phoneNumber = phoneNumber
+                            )
+                        }
+                    }
+
+                    composable(ScreensRoute.ProfileAddresses.route) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            ProfileAddressesScreen(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                userName = userName,
+                                phoneNumber = phoneNumber
                             )
                         }
                     }

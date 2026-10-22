@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,6 +50,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.domain.model.UserAddress
 import ir.arminniromandi.arminshop.presentation.components.AddEditAddressBottomSheet
+import ir.arminniromandi.arminshop.presentation.components.TopInfoMinify
 import ir.arminniromandi.arminshop.presentation.ui.theme.PrimaryOrangeRed
 import ir.arminniromandi.arminshop.presentation.ui.theme.ScreenBackground
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextDarkColor
@@ -56,7 +58,6 @@ import ir.arminniromandi.arminshop.presentation.ui.theme.TextGrayColor
 import ir.arminniromandi.arminshop.presentation.viewmodels.AddressViewModel
 import ir.arminniromandi.arminshop.presentation.viewmodels.CartSharedViewModel
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun MyAddressesScreen(
     onNavigateBack: () -> Unit,
@@ -75,12 +76,17 @@ fun MyAddressesScreen(
     var isBottomSheetOpen by remember { mutableStateOf(false) }
     var addressToEdit by remember { mutableStateOf<UserAddress?>(null) }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(ScreenBackground)
+    ) {
+
+
         Column(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxSize()
-                .background(ScreenBackground)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp)
         ) {
             // Header with Back Arrow and Title "آدرس های من" (Image 4 style)
             Row(
@@ -89,19 +95,6 @@ fun MyAddressesScreen(
                     .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onNavigateBack,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "بازگشت",
-                        tint = TextDarkColor
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
                 Text(
                     text = "آدرس های من",
                     style = MaterialTheme.typography.titleLarge.copy(
@@ -110,6 +103,20 @@ fun MyAddressesScreen(
                         fontSize = 20.sp
                     )
                 )
+                Spacer(modifier = Modifier.weight(1f))
+
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "بازگشت",
+                        tint = TextDarkColor
+                    )
+                }
+
+
             }
 
             // Address List from Room Database
@@ -135,7 +142,8 @@ fun MyAddressesScreen(
                     contentPadding = PaddingValues(bottom = 12.dp)
                 ) {
                     items(addresses, key = { it.id }) { address ->
-                        val isSelected = (address.isDefault) || (activeSelectedAddress?.id == address.id)
+                        val isSelected =
+                            (address.isDefault) || (activeSelectedAddress?.id == address.id)
 
                         AddressSelectionCard(
                             address = address,
@@ -165,7 +173,9 @@ fun MyAddressesScreen(
             // Sticky Bottom Button: "+ ثبت آدرس جدید" (Image 4 design)
             if (isSelectionMode) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Button(
@@ -222,6 +232,7 @@ fun MyAddressesScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
+                        .padding(bottom = 8.dp)
                 ) {
                     Text(
                         text = "+ ثبت آدرس جدید",
@@ -234,33 +245,34 @@ fun MyAddressesScreen(
                 }
             }
         }
-
-        // Add / Edit Address Bottom Sheet (saves directly to Room database)
-        AddEditAddressBottomSheet(
-            isOpen = isBottomSheetOpen,
-            addressToEdit = addressToEdit,
-            onDismissRequest = {
-                isBottomSheetOpen = false
-                addressToEdit = null
-            },
-            onSaveAddress = { id, name, address, postal, phone, isDef ->
-                addressViewModel.saveAddress(
-                    id = id,
-                    recipientName = name,
-                    fullAddress = address,
-                    postalCode = postal,
-                    phoneNumber = phone,
-                    isDefault = isDef,
-                    onSuccess = { saved ->
-                        cartViewModel.selectAddress(saved)
-                        isBottomSheetOpen = false
-                        addressToEdit = null
-                    }
-                )
-            }
-        )
     }
+
+    // Add / Edit Address Bottom Sheet (saves directly to Room database)
+    AddEditAddressBottomSheet(
+        isOpen = isBottomSheetOpen,
+        addressToEdit = addressToEdit,
+        onDismissRequest = {
+            isBottomSheetOpen = false
+            addressToEdit = null
+        },
+        onSaveAddress = { id, name, address, postal, phone, isDef ->
+            addressViewModel.saveAddress(
+                id = id,
+                recipientName = name,
+                fullAddress = address,
+                postalCode = postal,
+                phoneNumber = phone,
+                isDefault = isDef,
+                onSuccess = { saved ->
+                    cartViewModel.selectAddress(saved)
+                    isBottomSheetOpen = false
+                    addressToEdit = null
+                }
+            )
+        }
+    )
 }
+
 
 /**
  * Address card matching Image 4:

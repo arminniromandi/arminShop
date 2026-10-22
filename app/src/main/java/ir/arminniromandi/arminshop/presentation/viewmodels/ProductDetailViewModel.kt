@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ir.arminniromandi.arminshop.domain.model.Product
 import ir.arminniromandi.arminshop.domain.model.ProductComment
+import ir.arminniromandi.arminshop.domain.repository.FavoriteRepository
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
 import ir.arminniromandi.arminshop.domain.repository.UserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,6 +27,7 @@ import javax.inject.Inject
 class ProductDetailViewModel @Inject constructor(
     private val productRepository: ProductRepository,
     private val userRepository: UserRepository,
+    private val favoriteRepository: FavoriteRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -43,6 +45,23 @@ class ProductDetailViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val isFavorite: StateFlow<Boolean> = _productIdFlow
+        .flatMapLatest { id ->
+            favoriteRepository.isFavorite(id)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    fun toggleFavorite() {
+        viewModelScope.launch {
+            favoriteRepository.toggleFavorite(_productIdFlow.value)
+        }
+    }
 
     val allProducts: StateFlow<List<Product>> = productRepository.getProducts()
         .stateIn(
@@ -77,7 +96,7 @@ class ProductDetailViewModel @Inject constructor(
             val userPrefs = userRepository.getUserData().firstOrNull()
             val resolvedName = customUserName
                 ?: userPrefs?.fullName?.takeIf { it.isNotBlank() }
-                ?: "بهرام افشاری"
+                ?: "بدون نام"
 
             val newComment = ProductComment(
                 id = 0,

@@ -99,7 +99,7 @@ fun BannerSlider(
                         pagerState.animateScrollToPage(prev)
                     }
                 },
-            shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp),
+            shape = RoundedCornerShape(12.dp),
             color = Color.White
         ) {
             Box(

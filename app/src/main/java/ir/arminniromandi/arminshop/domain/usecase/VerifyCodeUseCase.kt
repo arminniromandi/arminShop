@@ -19,7 +19,6 @@ class VerifyCodeUseCase @Inject constructor(
     suspend operator fun invoke(email: String, code: String): Boolean {
         if (code.isBlank()) return false
 
-        // TODO: Replace hardcoded codes with real verification (e.g., server-side)
         val isCodeValid = code == "1234" || code == "0000"
         if (!isCodeValid) return false
 

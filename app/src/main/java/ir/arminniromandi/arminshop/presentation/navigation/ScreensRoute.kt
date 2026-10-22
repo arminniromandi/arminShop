@@ -94,5 +94,6 @@ sealed class ScreensRoute(val route: String) {
     data object Wishlist : ScreensRoute("wishlist")
     data object Notifications : ScreensRoute("notifications")
     data object MyExperiences : ScreensRoute("my_experiences")
+    data object ProfileAddresses : ScreensRoute("profile_addresses")
 }
 

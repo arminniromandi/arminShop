@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -87,6 +88,7 @@ fun ProductDetailScreen(
     val allProducts by viewModel.allProducts.collectAsStateWithLifecycle()
     val commentText by viewModel.commentText.collectAsStateWithLifecycle()
     val userRating by viewModel.userRating.collectAsStateWithLifecycle()
+    val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
 
     if (product != null) {
         ProductDetailContent(
@@ -95,6 +97,8 @@ fun ProductDetailScreen(
             similarProducts = allProducts.filter { it.id != product!!.id },
             commentText = commentText,
             userRating = userRating,
+            isFavorite = isFavorite,
+            onToggleFavorite = viewModel::toggleFavorite,
             onCommentChange = viewModel::onCommentTextChanged,
             onRatingChange = viewModel::onUserRatingChanged,
             onSubmitComment = { viewModel.submitComment() },
@@ -124,6 +128,8 @@ fun ProductDetailContent(
     similarProducts: List<Product>,
     commentText: String,
     userRating: Float,
+    isFavorite: Boolean = false,
+    onToggleFavorite: () -> Unit = {},
     onCommentChange: (String) -> Unit,
     onRatingChange: (Float) -> Unit,
     onSubmitComment: () -> Unit,
@@ -332,12 +338,12 @@ fun ProductDetailContent(
 
                             // Bookmark Icon
                             Icon(
-                                imageVector = Icons.Outlined.BookmarkBorder,
+                                imageVector = if (isFavorite) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                                 contentDescription = "Bookmark",
-                                tint = Color(0xFF616161),
+                                tint = if (isFavorite) PrimaryOrangeRed else Color(0xFF616161),
                                 modifier = Modifier
                                     .size(18.dp)
-                                    .clickable { }
+                                    .clickable { onToggleFavorite() }
                             )
 
                             // Comment bubble with small red badge (click scrolls to comments section)

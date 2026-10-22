@@ -73,8 +73,8 @@ fun ProfileScreen(
 @Composable
 fun ProfileScreenContent(
     modifier: Modifier = Modifier,
-    userName: String = "",
-    phoneNumber: String = "",
+    userName: String = "بدون نام",
+    phoneNumber: String = "شماره تلفن ثبت نشده",
     menuItems: List<ProfileMenuItem> = Constance.profileMenuItems,
     onEditProfileClick: () -> Unit = {},
     onChangeAvatarClick: () -> Unit = {},

@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmark
@@ -31,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,12 +47,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.R
+import ir.arminniromandi.arminshop.domain.model.Product
+import ir.arminniromandi.arminshop.presentation.components.TopInfoMinify
 import ir.arminniromandi.arminshop.presentation.components.formatPersianPrice
 import ir.arminniromandi.arminshop.presentation.ui.theme.PrimaryOrangeRed
 import ir.arminniromandi.arminshop.presentation.ui.theme.ScreenBackground
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextDarkColor
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextGrayColor
+import ir.arminniromandi.arminshop.presentation.viewmodels.WishlistViewModel
 
 data class WishlistItemUi(
     val id: Int,
@@ -65,89 +72,102 @@ data class WishlistItemUi(
 fun WishlistScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
-    wishlistItems: List<WishlistItemUi> = emptyList(),
+    userName: String = "بدون نام",
+    phoneNumber: String = "شماره ای ثبت نشده.",
+    viewModel: WishlistViewModel = hiltViewModel(),
     onProductClick: (Int) -> Unit = {},
-    onAddToCart: (Int) -> Unit = {}
+    onAddToCart: (Product) -> Unit = {}
 ) {
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    val favoriteProducts by viewModel.favoriteProducts.collectAsStateWithLifecycle()
+
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .background(ScreenBackground)
-                .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
-            // Header: Back icon and Title "علاقه‌مندی‌های من"
-            Row(
+            // Top Mini Profile Banner
+            TopInfoMinify(
+                userName = userName,
+                phoneNumber = phoneNumber
+            )
+
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp)
             ) {
-                IconButton(
-                    onClick = onNavigateBack,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "بازگشت",
-                        tint = TextDarkColor
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Text(
-                    text = "علاقه مندی های من",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        color = TextDarkColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                )
-            }
-
-            if (wishlistItems.isEmpty()) {
-                Box(
+                // Header: Back icon and Title "علاقه‌مندی‌های من"
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "هیچ محصولی در لیست علاقه مندی ها وجود ندارد",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = TextGrayColor,
-                            fontSize = 14.sp
+                        text = "علاقه مندی های من",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            color = TextDarkColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
                         )
                     )
+
+
                 }
-            } else {
-                // 2-Column Grid
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(wishlistItems, key = { it.id }) { item ->
-                        WishlistCard(
-                            item = item,
-                            onClick = { onProductClick(item.id) },
-                            onAddToCart = { onAddToCart(item.id) }
+
+                if (favoriteProducts.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "هیچ محصولی در لیست علاقه مندی ها وجود ندارد",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = TextGrayColor,
+                                fontSize = 14.sp
+                            )
                         )
+                    }
+                } else {
+                    // 2-Column Grid
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(favoriteProducts, key = { it.id }) { product ->
+                            val item = WishlistItemUi(
+                                id = product.id,
+                                title = product.name,
+                                imageRes = product.imageRes,
+                                discountPercent = product.discountPrec,
+                                mainPrice = product.mainPrice,
+                                finalPrice = if (product.discountPrec > 0 && product.finalPrice > 0) product.finalPrice else product.mainPrice
+                            )
+                            WishlistCard(
+                                item = item,
+                                onClick = { onProductClick(product.id) },
+                                onAddToCart = { onAddToCart(product) },
+                                onRemoveFavorite = { viewModel.removeFromFavorites(product.id) }
+                            )
+                        }
                     }
                 }
             }
         }
     }
-}
+
 
 @Composable
 private fun WishlistCard(
     item: WishlistItemUi,
     onClick: () -> Unit,
     onAddToCart: () -> Unit,
+    onRemoveFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -170,12 +190,14 @@ private fun WishlistCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Bookmark Icon (Filled, dark gray/black)
+                // Bookmark Icon (Filled, click to remove from favorites)
                 Icon(
                     imageVector = Icons.Default.Bookmark,
                     contentDescription = "علاقه‌مندی",
-                    tint = Color(0xFF2C3437),
-                    modifier = Modifier.size(22.dp)
+                    tint = PrimaryOrangeRed,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clickable { onRemoveFavorite() }
                 )
 
                 // Discount Badge (if > 0)
