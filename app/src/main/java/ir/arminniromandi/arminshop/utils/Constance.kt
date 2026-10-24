@@ -15,11 +15,12 @@ object Constance {
      */
     const val BASE_URL = "http://10.0.2.2:8080/api/"
 
+
     val categories = listOf(
         CategoryItem("1", "زنانه", R.drawable.woman_category),
         CategoryItem("2", "مردانه", R.drawable.man_category),
         CategoryItem("3", "کفش", R.drawable.shoes_category),
-        CategoryItem("4", "بچه گانه", R.drawable.baby_category)
+        CategoryItem("4", "بچه گانه", R.drawable.baby_category),
     )
 
     val profileMenuItems = listOf(
