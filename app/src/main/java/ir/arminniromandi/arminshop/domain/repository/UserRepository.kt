@@ -18,4 +18,9 @@ interface UserRepository {
     suspend fun saveFullName(fullName: String)
     suspend fun saveLoginState(isLoggedIn: Boolean)
     suspend fun clearUserData()
+
+    // Remote Auth API
+    suspend fun sendOtp(email: String): Result<String>
+    suspend fun verifyOtp(email: String, code: String): Result<Boolean>
+    fun getAuthToken(): String?
 }

@@ -10,9 +10,12 @@ import ir.arminniromandi.arminshop.domain.repository.FavoriteRepository
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
 import ir.arminniromandi.arminshop.domain.repository.UserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
@@ -76,6 +79,9 @@ class ProductDetailViewModel @Inject constructor(
     private val _userRating = MutableStateFlow(5f)
     val userRating: StateFlow<Float> = _userRating.asStateFlow()
 
+    private val _userMessage = MutableSharedFlow<String>()
+    val userMessage: SharedFlow<String> = _userMessage.asSharedFlow()
+
     fun onCommentTextChanged(text: String) {
         _commentText.value = text
     }
@@ -86,7 +92,12 @@ class ProductDetailViewModel @Inject constructor(
 
     fun submitComment(customUserName: String? = null) {
         val text = _commentText.value.trim()
-        if (text.isBlank()) return
+        if (text.isBlank()) {
+            viewModelScope.launch {
+                _userMessage.emit("ثبت امتیاز تنها با نوشتن نظر امکان‌پذیر است. لطفاً نظر خود را بنویسید.")
+            }
+            return
+        }
 
         val currentRating = _userRating.value
         val dateFormat = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
@@ -96,7 +107,8 @@ class ProductDetailViewModel @Inject constructor(
             val userPrefs = userRepository.getUserData().firstOrNull()
             val resolvedName = customUserName
                 ?: userPrefs?.fullName?.takeIf { it.isNotBlank() }
-                ?: "بدون نام"
+                ?: userPrefs?.email?.substringBefore("@")
+                ?: "کاربر فروشگاه"
 
             val newComment = ProductComment(
                 id = 0,
@@ -105,11 +117,14 @@ class ProductDetailViewModel @Inject constructor(
                 text = text,
                 date = currentDate
             )
-            productRepository.addComment(productId, newComment)
-
-            // Reset input
-            _commentText.value = ""
-            _userRating.value = 5f
+            try {
+                productRepository.addComment(productId, newComment)
+                _commentText.value = ""
+                _userRating.value = 5f
+                _userMessage.emit("نظر و امتیاز شما با موفقیت ثبت شد")
+            } catch (e: Exception) {
+                _userMessage.emit(e.message ?: "خطا در ثبت نظر")
+            }
         }
     }
 
@@ -124,7 +139,8 @@ class ProductDetailViewModel @Inject constructor(
             val userPrefs = userRepository.getUserData().firstOrNull()
             val resolvedName = customUserName
                 ?: userPrefs?.fullName?.takeIf { it.isNotBlank() }
-                ?: "بهرام افشاری"
+                ?: userPrefs?.email?.substringBefore("@")
+                ?: "کاربر فروشگاه"
 
             val newComment = ProductComment(
                 id = 0,
@@ -133,7 +149,12 @@ class ProductDetailViewModel @Inject constructor(
                 text = text,
                 date = currentDate
             )
-            productRepository.addComment(productId, newComment)
+            try {
+                productRepository.addComment(productId, newComment)
+                _userMessage.emit("پاسخ شما با موفقیت ثبت شد")
+            } catch (e: Exception) {
+                _userMessage.emit(e.message ?: "خطا در ثبت پاسخ")
+            }
         }
     }
 }

@@ -433,7 +433,7 @@ private fun VerificationCodeStepContent(
 
         // Description text with user's email
         Text(
-            text = "کد ۴ رقمی ارسال شده به $email خود را وارد کنید",
+            text = "کد تأیید ۶ رقمی ارسال شده به $email خود را وارد کنید",
             style = MaterialTheme.typography.bodyMedium.copy(
                 color = ShopSecondaryText,
                 lineHeight = 20.sp

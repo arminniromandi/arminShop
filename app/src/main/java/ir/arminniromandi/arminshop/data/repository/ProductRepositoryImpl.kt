@@ -1,9 +1,15 @@
 package ir.arminniromandi.arminshop.data.repository
 
+import android.util.Log
 import ir.arminniromandi.arminshop.data.local.dao.ProductDao
+import ir.arminniromandi.arminshop.data.mapper.calculateFinalPrice
+import ir.arminniromandi.arminshop.data.mapper.parseProductCategory
 import ir.arminniromandi.arminshop.data.mapper.toDomain
 import ir.arminniromandi.arminshop.data.mapper.toEntity
 import ir.arminniromandi.arminshop.data.mock.MockProducts
+import ir.arminniromandi.arminshop.data.remote.ShopApiService
+import ir.arminniromandi.arminshop.data.remote.dto.AddCommentRequest
+import ir.arminniromandi.arminshop.data.remote.dto.UpdateRatingRequest
 import ir.arminniromandi.arminshop.domain.model.Product
 import ir.arminniromandi.arminshop.domain.model.ProductCategory
 import ir.arminniromandi.arminshop.domain.model.ProductComment
@@ -22,12 +28,20 @@ import javax.inject.Inject
 import kotlin.math.roundToInt
 
 class ProductRepositoryImpl @Inject constructor(
-    private val productDao: ProductDao
+    private val productDao: ProductDao,
+    private val apiService: ShopApiService
 ) : ProductRepository {
 
+    companion object {
+        private const val TAG = "ProductRepositoryImpl"
+    }
+
+    private val repositoryScope = CoroutineScope(Dispatchers.IO)
+
     init {
-        CoroutineScope(Dispatchers.IO).launch {
+        repositoryScope.launch {
             checkAndSeedDatabase()
+            refreshAll()
         }
     }
 
@@ -45,9 +59,83 @@ class ProductRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun refreshAll() = withContext(Dispatchers.IO) {
+        syncSpecialOffers()
+        syncAllCategories()
+    }
+
+    private suspend fun syncSpecialOffers() {
+        try {
+            val response = apiService.getSpecialOffers()
+            if (response.isSuccessful) {
+                val dtos = response.body()?.specialOffers ?: emptyList()
+                if (dtos.isNotEmpty()) {
+                    val entities = dtos.map { dto ->
+                        dto.copy(isSpecialOffer = true).toEntity()
+                    }
+                    productDao.insertProducts(entities)
+                    Log.d(TAG, "Successfully synced ${entities.size} special offers")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Offline or server unreachable for special offers: ${e.message}")
+        }
+    }
+
+    private suspend fun syncAllCategories() {
+        val categories = listOf("مردانه", "زنانه", "کفش", "بچه گانه")
+        for (category in categories) {
+            syncCategoryProducts(category)
+        }
+    }
+
+    private suspend fun syncCategoryProducts(categoryIdentifier: String) {
+        try {
+            val response = apiService.getProductsByCategory(categoryIdentifier)
+            if (response.isSuccessful) {
+                val dtos = response.body()?.products ?: emptyList()
+                if (dtos.isNotEmpty()) {
+                    val entities = dtos.map { dto ->
+                        dto.toEntity()
+                    }
+                    productDao.insertProducts(entities)
+                    Log.d(TAG, "Successfully synced ${entities.size} products for category $categoryIdentifier")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Offline or server unreachable for category $categoryIdentifier: ${e.message}")
+        }
+    }
+
+    private suspend fun syncProductDetails(productId: Int) {
+        try {
+            val response = apiService.getProductDetails(productId)
+            if (response.isSuccessful) {
+                val dto = response.body()?.product
+                if (dto != null) {
+                    val entity = dto.toEntity()
+                    productDao.insertProduct(entity)
+
+                    // Also sync comments if present in product details or comments endpoint
+                    val commentsResponse = apiService.getComments(productId)
+                    if (commentsResponse.isSuccessful) {
+                        val commentDtos = commentsResponse.body()?.comments ?: emptyList()
+                        if (commentDtos.isNotEmpty()) {
+                            val commentEntities = commentDtos.map { it.toEntity(productId) }
+                            productDao.insertComments(commentEntities)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Offline or server unreachable for product $productId: ${e.message}")
+        }
+    }
+
     override fun getProducts(): Flow<List<Product>> {
         return flow {
             checkAndSeedDatabase()
+            repositoryScope.launch { refreshAll() }
             emitAll(
                 productDao.getProductsWithComments().map { list ->
                     if (list.isEmpty()) {
@@ -60,9 +148,33 @@ class ProductRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getSpecialOffers(): Flow<List<Product>> {
+        return flow {
+            checkAndSeedDatabase()
+            repositoryScope.launch { syncSpecialOffers() }
+            emitAll(
+                productDao.getSpecialOffersWithComments().map { list ->
+                    if (list.isNotEmpty()) {
+                        list.map { it.toDomain() }
+                    } else {
+                        // Fallback from cache to any discounted products or sample
+                        val all = productDao.getProductsWithComments().firstOrNull() ?: emptyList()
+                        val discounted = all.filter { it.product.discountPrec > 0 }
+                        if (discounted.isNotEmpty()) {
+                            discounted.map { it.toDomain() }
+                        } else {
+                            MockProducts.sampleProducts.filter { it.discountPrec > 0 }
+                        }
+                    }
+                }
+            )
+        }
+    }
+
     override fun getProductById(productId: Int): Flow<Product?> {
         return flow {
             checkAndSeedDatabase()
+            repositoryScope.launch { syncProductDetails(productId) }
             emitAll(
                 productDao.getProductWithCommentsById(productId).map { productWithComments ->
                     productWithComments?.toDomain()
@@ -95,19 +207,19 @@ class ProductRepositoryImpl @Inject constructor(
     override fun getProductsByCategory(categoryId: String, query: String): Flow<List<Product>> {
         val categoryItem = Constance.categories.find { it.id == categoryId || it.name == categoryId }
         val categoryTitle = categoryItem?.name ?: categoryId
-        val categoryEnumName = ProductCategory.entries.find {
-            it.name.equals(categoryId, ignoreCase = true) || it.title == categoryTitle
-        }?.name ?: categoryTitle
+        val categoryEnum = parseProductCategory(categoryTitle)
+        val categoryEnumName = categoryEnum.name
 
         val trimmedQuery = query.trim()
         return flow {
             checkAndSeedDatabase()
+            repositoryScope.launch { syncCategoryProducts(categoryTitle) }
             emitAll(
                 productDao.getProductsByCategoryAndQuery(categoryEnumName, categoryTitle, trimmedQuery).map { list ->
                     val dbResults = list.map { it.toDomain() }
                     if (dbResults.isEmpty()) {
                         MockProducts.sampleProducts.filter { product ->
-                            val matchesCategory = product.category.name.equals(categoryEnumName, ignoreCase = true) ||
+                            val matchesCategory = product.category == categoryEnum ||
                                     product.category.title == categoryTitle
                             val matchesQuery = trimmedQuery.isBlank() ||
                                     product.name.contains(trimmedQuery, ignoreCase = true) ||
@@ -125,36 +237,56 @@ class ProductRepositoryImpl @Inject constructor(
     override suspend fun addComment(productId: Int, comment: ProductComment): Unit = withContext(Dispatchers.IO) {
         checkAndSeedDatabase()
 
-        val existingDbProduct = productDao.getProductWithCommentsById(productId).firstOrNull()
-        if (existingDbProduct == null) {
-            val mockProduct = MockProducts.sampleProducts.find { it.id == productId }
-            if (mockProduct != null) {
-                productDao.insertProducts(listOf(mockProduct.toEntity()))
-                if (mockProduct.comments.isNotEmpty()) {
-                    productDao.insertComments(mockProduct.comments.map { it.toEntity(productId) })
-                }
-            }
+        // 1. Enforce business rule: review text MUST not be blank
+        val trimmedText = comment.text.trim()
+        require(trimmedText.isNotBlank()) {
+            "متن نظر نمی‌تواند خالی باشد. امتیاز به تنهایی قابل ارسال نیست."
         }
 
-        // Insert new comment into Room
-        productDao.insertComment(comment.toEntity(productId))
+        // 2. Fetch current product rating & count from local DB
+        val existingProductWithComments = productDao.getProductWithCommentsById(productId).firstOrNull()
+        val currentRating = existingProductWithComments?.product?.rating ?: 5.0f
+        val currentReviewsCount = existingProductWithComments?.comments?.size ?: 0
 
-        // Recalculate average rating and total review count from Room DB
-        val updatedProductWithComments = productDao.getProductWithCommentsById(productId).firstOrNull()
-        if (updatedProductWithComments != null) {
-            val comments = updatedProductWithComments.comments
-            val count = comments.size
-            val avgRating = if (count > 0) {
-                val sum = comments.sumOf { it.rating.toDouble() }
-                ((sum / count * 10).roundToInt() / 10f)
-            } else {
-                0f
-            }
-            productDao.updateProductRatingAndReviewCount(
+        // 3. Client-side recalculation of new average rating
+        val newReviewsCount = currentReviewsCount + 1
+        val newAverageRating = if (currentReviewsCount > 0) {
+            val totalScore = (currentRating * currentReviewsCount) + comment.rating
+            ((totalScore / newReviewsCount * 10).roundToInt() / 10f)
+        } else {
+            ((comment.rating * 10).roundToInt() / 10f)
+        }
+
+        // 4. Try sending to server if online
+        try {
+            // Send comment first
+            val commentResponse = apiService.addComment(
                 productId = productId,
-                newRating = avgRating,
-                newReviewsCount = count
+                request = AddCommentRequest(
+                    content = trimmedText,
+                    rating = comment.rating.toInt().coerceIn(1, 5)
+                )
             )
+            Log.d(TAG, "Server comment response: ${commentResponse.code()} ${commentResponse.message()}")
+
+            // Send updated calculated rating to server
+            val ratingResponse = apiService.updateRating(
+                id = productId,
+                request = UpdateRatingRequest(rating = newAverageRating)
+            )
+            Log.d(TAG, "Server rating response: ${ratingResponse.code()} ${ratingResponse.message()}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to submit comment/rating to server (offline mode): ${e.message}")
         }
+
+        // 5. Update local Room database so offline-first works instantly
+        val commentEntity = comment.toEntity(productId)
+        productDao.insertComment(commentEntity)
+
+        productDao.updateProductRatingAndReviewCount(
+            productId = productId,
+            newRating = newAverageRating,
+            newReviewsCount = newReviewsCount
+        )
     }
 }

@@ -29,7 +29,8 @@ data class LoginUiState(
     val isCodeError: Boolean = false,
     val isEmailError: Boolean = false,
     val timerSeconds: Int = 201,
-    val isLoggedIn: Boolean? = null
+    val isLoggedIn: Boolean? = null,
+    val statusMessage: String? = null
 ) {
     val isEmailSubmitEnabled: Boolean
         get() = email.isNotBlank()
@@ -91,7 +92,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun submitEmail() {
-        val currentEmail = _uiState.value.email
+        val currentEmail = _uiState.value.email.trim()
         if (!validateEmailUseCase(currentEmail)) {
             _uiState.update { it.copy(isEmailError = true) }
             return
@@ -99,13 +100,14 @@ class LoginViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, isEmailError = false) }
-            delay(1200L)
+            val result = userRepository.sendOtp(currentEmail)
             _uiState.update {
                 it.copy(
                     isLoading = false,
                     currentStep = LoginStep.VERIFICATION_CODE,
                     timerSeconds = 201,
-                    isCodeError = false
+                    isCodeError = false,
+                    statusMessage = result.getOrNull()
                 )
             }
             startTimer()
@@ -113,15 +115,15 @@ class LoginViewModel @Inject constructor(
     }
 
     fun submitVerificationCode() {
-        val code = _uiState.value.verificationCode
-        val currentEmail = _uiState.value.email
+        val code = _uiState.value.verificationCode.trim()
+        val currentEmail = _uiState.value.email.trim()
         if (code.isBlank()) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            delay(1500L) // Simulate network request
 
-            if (verifyCodeUseCase(email = currentEmail, code = code)) {
+            val isSuccess = verifyCodeUseCase(email = currentEmail, code = code)
+            if (isSuccess) {
                 stopTimer()
                 _uiState.update {
                     it.copy(
@@ -142,17 +144,15 @@ class LoginViewModel @Inject constructor(
     }
 
     fun submitUserInfo(onSuccess: () -> Unit) {
-        val currentName = _uiState.value.fullName
+        val currentName = _uiState.value.fullName.trim()
         if (currentName.isBlank()) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            // Save full name and login state to DataStore after name is submitted
             userRepository.saveFullName(currentName)
             userRepository.saveLoginState(true)
 
-            delay(1000L) // Simulate network request
             _uiState.update { it.copy(isLoading = false) }
             onSuccess()
         }
@@ -171,14 +171,18 @@ class LoginViewModel @Inject constructor(
     }
 
     fun resendCode() {
-        _uiState.update {
-            it.copy(
-                timerSeconds = 201,
-                verificationCode = "",
-                isCodeError = false
-            )
+        val currentEmail = _uiState.value.email.trim()
+        viewModelScope.launch {
+            userRepository.sendOtp(currentEmail)
+            _uiState.update {
+                it.copy(
+                    timerSeconds = 201,
+                    verificationCode = "",
+                    isCodeError = false
+                )
+            }
+            startTimer()
         }
-        startTimer()
     }
 
     private fun startTimer() {

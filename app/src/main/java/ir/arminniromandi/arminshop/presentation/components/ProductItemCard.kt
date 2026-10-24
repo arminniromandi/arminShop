@@ -89,8 +89,9 @@ fun ProductItemCard(
                 .padding(10.dp),
             contentAlignment = Alignment.Center
         ) {
-            Image(
-                painter = painterResource(id = product.imageRes),
+            ProductImage(
+                imageUrl = product.imageUrl,
+                fallbackRes = product.imageRes,
                 contentDescription = product.name,
                 modifier = Modifier
                     .fillMaxSize()

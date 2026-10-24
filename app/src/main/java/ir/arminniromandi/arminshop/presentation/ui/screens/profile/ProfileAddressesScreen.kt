@@ -114,7 +114,7 @@ fun ProfileAddressesScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "هیچ آدرسی در دیتابیس ثبت نشده است",
+                            text = "هیچ آدرسی  ثبت نشده است",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = TextGrayColor,
                                 fontSize = 14.sp

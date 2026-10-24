@@ -1,6 +1,7 @@
 package ir.arminniromandi.arminshop.presentation.ui.screens
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -67,6 +68,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.domain.model.Product
 import ir.arminniromandi.arminshop.domain.model.ProductComment
 import ir.arminniromandi.arminshop.presentation.animation.productSharedElement
+import ir.arminniromandi.arminshop.presentation.components.ProductImage
 import ir.arminniromandi.arminshop.presentation.components.ProductItemCard
 import ir.arminniromandi.arminshop.presentation.components.formatPersianPrice
 import ir.arminniromandi.arminshop.presentation.ui.theme.PrimaryOrangeRed
@@ -89,6 +91,13 @@ fun ProductDetailScreen(
     val commentText by viewModel.commentText.collectAsStateWithLifecycle()
     val userRating by viewModel.userRating.collectAsStateWithLifecycle()
     val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.userMessage.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     if (product != null) {
         ProductDetailContent(
@@ -260,8 +269,9 @@ fun ProductDetailContent(
                         }
 
                         // Product Image in Center
-                        Image(
-                            painter = painterResource(id = product.imageRes),
+                        ProductImage(
+                            imageUrl = product.imageUrl,
+                            fallbackRes = product.imageRes,
                             contentDescription = product.name,
                             modifier = Modifier
                                 .fillMaxSize()
@@ -567,27 +577,29 @@ fun ProductDetailContent(
                 }
 
                 // Row: Submit Button on Left, Rating Stars on Right (RTL context)
+                val isSubmitEnabled = commentText.isNotBlank()
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Red Submit Button
+                    // Submit Button with Rating validation
                     Surface(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable { onSubmitComment() },
+                            .clickable(enabled = isSubmitEnabled) { onSubmitComment() },
                         shape = RoundedCornerShape(8.dp),
-                        color = PrimaryOrangeRed
+                        color = if (isSubmitEnabled) PrimaryOrangeRed else Color(0xFFBDBDBD)
                     ) {
                         Text(
-                            text = "ثبت نظر",
+                            text = "ثبت نظر و امتیاز",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             ),
-                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                         )
                     }
 

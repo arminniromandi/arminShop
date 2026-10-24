@@ -6,8 +6,10 @@ import kotlinx.coroutines.flow.Flow
 
 interface ProductRepository {
     fun getProducts(): Flow<List<Product>>
+    fun getSpecialOffers(): Flow<List<Product>>
     fun getProductById(productId: Int): Flow<Product?>
     fun searchProducts(query: String): Flow<List<Product>>
     fun getProductsByCategory(categoryId: String, query: String = ""): Flow<List<Product>>
     suspend fun addComment(productId: Int, comment: ProductComment)
+    suspend fun refreshAll()
 }

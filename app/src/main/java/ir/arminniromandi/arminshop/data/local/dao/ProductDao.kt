@@ -18,6 +18,10 @@ interface ProductDao {
     fun getProductsWithComments(): Flow<List<ProductWithComments>>
 
     @Transaction
+    @Query("SELECT * FROM products WHERE isSpecialOffer = 1")
+    fun getSpecialOffersWithComments(): Flow<List<ProductWithComments>>
+
+    @Transaction
     @Query("SELECT * FROM products WHERE id = :productId")
     fun getProductWithCommentsById(productId: Int): Flow<ProductWithComments?>
 
@@ -29,8 +33,15 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE (category = :categoryEnumName OR category = :categoryTitle) AND (name LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%')")
     fun getProductsByCategoryAndQuery(categoryEnumName: String, categoryTitle: String, query: String): Flow<List<ProductWithComments>>
 
+    @Transaction
+    @Query("SELECT * FROM products WHERE category = :categoryEnumName OR category = :categoryTitle")
+    fun getProductsByCategory(categoryEnumName: String, categoryTitle: String): Flow<List<ProductWithComments>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertProducts(products: List<ProductEntity>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertProduct(product: ProductEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertComments(comments: List<ProductCommentEntity>): List<Long>

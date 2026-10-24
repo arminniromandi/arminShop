@@ -23,7 +23,10 @@ import ir.arminniromandi.arminshop.data.local.dao.OrderDao
 import ir.arminniromandi.arminshop.data.local.dao.ProductDao
 import ir.arminniromandi.arminshop.data.local.entity.ProductCommentEntity
 import ir.arminniromandi.arminshop.data.local.entity.ProductEntity
+import ir.arminniromandi.arminshop.data.local.security.SecureTokenManager
 import ir.arminniromandi.arminshop.data.mock.MockProducts
+import ir.arminniromandi.arminshop.data.remote.AuthInterceptor
+import ir.arminniromandi.arminshop.data.remote.ShopApiService
 import ir.arminniromandi.arminshop.data.repository.AddressRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.CartRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.FavoriteRepositoryImpl
@@ -38,9 +41,15 @@ import ir.arminniromandi.arminshop.domain.repository.NotificationRepository
 import ir.arminniromandi.arminshop.domain.repository.OrderRepository
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
 import ir.arminniromandi.arminshop.domain.repository.UserRepository
+import ir.arminniromandi.arminshop.utils.Constance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Provider
 import javax.inject.Singleton
 
@@ -61,8 +70,47 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideUserRepository(userPreferencesDataSource: UserPreferencesDataSource): UserRepository {
-        return UserRepositoryImpl(userPreferencesDataSource)
+    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+        return OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
+            .addInterceptor(loggingInterceptor)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(Constance.BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideShopApiService(retrofit: Retrofit): ShopApiService {
+        return retrofit.create(ShopApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserRepository(
+        userPreferencesDataSource: UserPreferencesDataSource,
+        secureTokenManager: SecureTokenManager,
+        shopApiService: ShopApiService
+    ): UserRepository {
+        return UserRepositoryImpl(
+            userPreferencesDataSource = userPreferencesDataSource,
+            secureTokenManager = secureTokenManager,
+            shopApiService = shopApiService
+        )
     }
 
     @Provides
@@ -114,14 +162,21 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideProductRepository(productDao: ProductDao): ProductRepository {
-        return ProductRepositoryImpl(productDao)
+    fun provideProductRepository(
+        productDao: ProductDao,
+        shopApiService: ShopApiService
+    ): ProductRepository {
+        return ProductRepositoryImpl(productDao, shopApiService)
     }
 
     @Provides
     @Singleton
-    fun provideCartRepository(cartDao: CartDao): CartRepository {
-        return CartRepositoryImpl(cartDao)
+    fun provideCartRepository(
+        cartDao: CartDao,
+        shopApiService: ShopApiService,
+        secureTokenManager: SecureTokenManager
+    ): CartRepository {
+        return CartRepositoryImpl(cartDao, shopApiService, secureTokenManager)
     }
 
     @Provides
@@ -170,6 +225,7 @@ object AppModule {
             ProductEntity(
                 id = product.id,
                 imageRes = product.imageRes,
+                imageUrl = product.imageUrl,
                 name = product.name,
                 description = product.description,
                 weight = product.features.weight,
@@ -179,7 +235,8 @@ object AppModule {
                 discountPrec = product.discountPrec,
                 rating = product.rating,
                 reviewsCount = product.reviewsCount,
-                category = product.category.name
+                category = product.category.name,
+                isSpecialOffer = product.isSpecialOffer
             )
         }
 
