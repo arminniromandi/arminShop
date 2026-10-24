@@ -95,6 +95,19 @@ fun MyAddressesScreen(
                     .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "بازگشت",
+                        tint = TextDarkColor
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+
                 Text(
                     text = "آدرس های من",
                     style = MaterialTheme.typography.titleLarge.copy(
@@ -103,18 +116,8 @@ fun MyAddressesScreen(
                         fontSize = 20.sp
                     )
                 )
-                Spacer(modifier = Modifier.weight(1f))
 
-                IconButton(
-                    onClick = onNavigateBack,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "بازگشت",
-                        tint = TextDarkColor
-                    )
-                }
+
 
 
             }
@@ -142,8 +145,7 @@ fun MyAddressesScreen(
                     contentPadding = PaddingValues(bottom = 12.dp)
                 ) {
                     items(addresses, key = { it.id }) { address ->
-                        val isSelected =
-                            (address.isDefault) || (activeSelectedAddress?.id == address.id)
+                        val isSelected = activeSelectedAddress?.id == address.id
 
                         AddressSelectionCard(
                             address = address,
@@ -336,7 +338,7 @@ fun AddressSelectionCard(
                     modifier = Modifier.clickable { onSetDefault() }
                 ) {
                     RadioButton(
-                        selected = address.isDefault || isSelected,
+                        selected = isSelected,
                         onClick = { onSetDefault() },
                         colors = RadioButtonDefaults.colors(
                             selectedColor = PrimaryOrangeRed,

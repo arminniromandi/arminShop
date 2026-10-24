@@ -58,6 +58,13 @@ object Constance {
             onClick = { navController ->
                 navController.navigate(ScreensRoute.ProfileAddresses.route)
             }
+        ),
+        ProfileMenuItem(
+            title = "ارتباط با ما",
+            iconRes = R.drawable.messages,
+            onClick = { navController ->
+                navController.navigate(ScreensRoute.ContactUs.route)
+            }
         )
     )
 }

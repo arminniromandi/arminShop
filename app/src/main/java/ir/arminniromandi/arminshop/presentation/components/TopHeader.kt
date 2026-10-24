@@ -1,6 +1,7 @@
 package ir.arminniromandi.arminshop.presentation.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -29,10 +31,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ir.arminniromandi.arminshop.R
+import ir.arminniromandi.arminshop.presentation.ui.theme.TextDarkColor
 
 /**
  * Custom Header according to design specs:
@@ -46,6 +51,7 @@ fun ShopHeader(
     onProfileClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
     onMenuClick: () -> Unit = {},
+    firstLetter: String,
     isDrawerOpen: Boolean = false
 ) {
     Surface(
@@ -107,17 +113,20 @@ fun ShopHeader(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
+
+                            .background(Color.LightGray)
                             .clickable { onProfileClick() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.malecloth),
-                            contentDescription = "Profile",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
+                        Text(
+                            text = firstLetter,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = TextDarkColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
                         )
+
                     }
 
                     // Notification Icon
@@ -154,6 +163,7 @@ fun ShopHeader(
 @Composable
 private fun ShopHeaderPreview() {
     ShopHeader(
-        onBackClick = {}
+        onBackClick = {},
+        firstLetter = "آ"
     )
 }

@@ -217,7 +217,7 @@ fun EditProfileContent(
                     label = "شماره همراه:",
                     value = phoneNumber,
                     onValueChange = onPhoneNumberChange,
-                    placeholder = "۰۹۱۷۵۶۴۲۳۴۵۶",
+                    placeholder = "09121234567",
                     keyboardType = KeyboardType.Phone
                 )
 
@@ -226,7 +226,7 @@ fun EditProfileContent(
                     label = "ایمیل:",
                     value = email,
                     onValueChange = onEmailChange,
-                    placeholder = "مثال: bahramafshari@gmail.com",
+                    placeholder = "مثال: example@gmail.com",
                     keyboardType = KeyboardType.Email
                 )
 

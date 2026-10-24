@@ -3,6 +3,7 @@ package ir.arminniromandi.arminshop.presentation.ui.screens
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,6 +45,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +62,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import ir.arminniromandi.arminshop.R
 import ir.arminniromandi.arminshop.presentation.ui.theme.ArminShopTheme
 import ir.arminniromandi.arminshop.presentation.ui.theme.ShopDecorativeCircle
 import ir.arminniromandi.arminshop.presentation.ui.theme.ShopPrimaryRedGradient
@@ -258,9 +261,10 @@ private fun LoginHeader() {
                 .background(Color.Transparent),
             contentAlignment = Alignment.Center
         ) {
-            ShoppingCartLogoIcon(
-                modifier = Modifier.size(90.dp),
-                tint = MaterialTheme.colorScheme.primary
+            Image(
+                painter = painterResource(R.drawable.logo),
+                contentDescription = "Shop logo",
+                modifier = Modifier.size(100.dp)
             )
         }
 
@@ -271,7 +275,12 @@ private fun LoginHeader() {
             text = buildAnnotatedString {
                 withStyle(
                     style = SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFFF03731),
+                                Color(0xFFF03731)
+                            )
+                        ),
                         fontWeight = FontWeight.Bold,
                         fontSize = 32.sp
                     )
@@ -779,43 +788,6 @@ private fun PleaseWaitDialog() {
     }
 }
 
-/**
- * Shopping Cart Logo Icon Placeholder
- */
-@Composable
-private fun ShoppingCartLogoIcon(
-    modifier: Modifier = Modifier,
-    tint: Color = MaterialTheme.colorScheme.primary
-) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-
-        val path = Path().apply {
-            moveTo(w * 0.15f, h * 0.25f)
-            lineTo(w * 0.3f, h * 0.25f)
-            lineTo(w * 0.42f, h * 0.62f)
-            lineTo(w * 0.8f, h * 0.62f)
-            lineTo(w * 0.9f, h * 0.35f)
-            lineTo(w * 0.33f, h * 0.35f)
-        }
-        drawPath(
-            path = path,
-            color = tint,
-            style = Stroke(width = w * 0.07f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        drawCircle(
-            color = tint,
-            radius = w * 0.07f,
-            center = Offset(w * 0.45f, h * 0.78f)
-        )
-        drawCircle(
-            color = tint,
-            radius = w * 0.07f,
-            center = Offset(w * 0.75f, h * 0.78f)
-        )
-    }
-}
 
 /**
  * Left Arrow Icon for RTL back navigation

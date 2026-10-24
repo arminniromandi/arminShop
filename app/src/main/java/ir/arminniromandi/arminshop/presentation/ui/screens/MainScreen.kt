@@ -35,15 +35,18 @@ import ir.arminniromandi.arminshop.presentation.navigation.ScreensRoute
 import ir.arminniromandi.arminshop.presentation.navigation.navigateToTab
 import ir.arminniromandi.arminshop.presentation.viewmodels.CartSharedViewModel
 import ir.arminniromandi.arminshop.presentation.viewmodels.LoginViewModel
+import ir.arminniromandi.arminshop.presentation.viewmodels.ProfileViewModel
 
 @Composable
 fun MainScreen(
     modifier: Modifier = Modifier,
     cartViewModel: CartSharedViewModel = hiltViewModel(),
-    loginViewModel: LoginViewModel = hiltViewModel()
+    loginViewModel: LoginViewModel = hiltViewModel(),
+    profileViewModel: ProfileViewModel = hiltViewModel()
 ) {
     val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
     val isLoggedIn = loginUiState.isLoggedIn
+    val currentUser by profileViewModel.user.collectAsStateWithLifecycle()
 
     // Wait until initial login state is retrieved from DataStore to prevent initial screen jump
     if (isLoggedIn == null) {
@@ -91,7 +94,7 @@ fun MainScreen(
         isMenuOpen = false
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl ,) {
 
 
         Box(
@@ -117,8 +120,10 @@ fun MainScreen(
                                 }
                             },
                             onNotificationClick = {
-                                // Action for notifications
+
+                                navController.navigate(ScreensRoute.Notifications.route)
                             },
+                            firstLetter = currentUser?.fullName?.first().toString() ?: "ن",
                             onMenuClick = {
                                 isMenuOpen = !isMenuOpen
                             },
@@ -151,6 +156,9 @@ fun MainScreen(
                     // Top sliding menu dropdown positioned right under topBar
                     if (!isLoginRoute) {
                         TopMenuDropdown(
+                            userName = currentUser?.fullName?.takeIf { it.isNotBlank() },
+                            userEmail = currentUser?.email?.takeIf { it.isNotBlank() },
+                            userPhone = currentUser?.phoneNumber?.takeIf { it.isNotBlank() },
                             isOpen = isMenuOpen,
                             onDismissRequest = { isMenuOpen = false },
                             onProfileClick = {
@@ -158,6 +166,19 @@ fun MainScreen(
                                     navController.navigateToTab(ScreensRoute.ProfileGraph.route)
                                 }
                             },
+                            onOrdersClick = {
+                                if (currentRoute != ScreensRoute.Profile.route) {
+                                    navController.navigateToTab(ScreensRoute.CartGraph.route)
+                                }
+                            },
+                            onContactUsClick = {
+                                navController.navigate(ScreensRoute.ContactUs.route)
+                            },
+                            onAboutUsClick = {
+                                navController.navigate(ScreensRoute.ContactUs.route)
+
+                            },
+
                             modifier = Modifier.padding(top = innerPadding.calculateTopPadding())
                         )
                     }

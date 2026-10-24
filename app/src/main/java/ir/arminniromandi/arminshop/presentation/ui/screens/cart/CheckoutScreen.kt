@@ -99,6 +99,16 @@ fun CheckoutScreen(
                     .padding(bottom = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+
+                Text(
+                    text = "سبد خرید",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        color = TextDarkColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                )
+                Spacer(modifier = Modifier.weight(1f))
                 IconButton(
                     onClick = onNavigateBack,
                     modifier = Modifier.size(36.dp)
@@ -110,16 +120,8 @@ fun CheckoutScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
 
-                Text(
-                    text = "سبد خرید",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        color = TextDarkColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                )
+
             }
 
             // Scrollable Content

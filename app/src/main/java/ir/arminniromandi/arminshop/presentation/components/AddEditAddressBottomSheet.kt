@@ -151,7 +151,9 @@ fun AddEditAddressBottomSheet(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryOrangeRed,
                         cursorColor = PrimaryOrangeRed,
-                        focusedLabelColor = PrimaryOrangeRed
+                        focusedLabelColor = PrimaryOrangeRed,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
                     )
                 )
 
@@ -170,7 +172,10 @@ fun AddEditAddressBottomSheet(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryOrangeRed,
                         cursorColor = PrimaryOrangeRed,
-                        focusedLabelColor = PrimaryOrangeRed
+                        focusedLabelColor = PrimaryOrangeRed,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
+
                     )
                 )
 
@@ -189,7 +194,9 @@ fun AddEditAddressBottomSheet(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryOrangeRed,
                         cursorColor = PrimaryOrangeRed,
-                        focusedLabelColor = PrimaryOrangeRed
+                        focusedLabelColor = PrimaryOrangeRed,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
                     )
                 )
 
@@ -208,7 +215,9 @@ fun AddEditAddressBottomSheet(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryOrangeRed,
                         cursorColor = PrimaryOrangeRed,
-                        focusedLabelColor = PrimaryOrangeRed
+                        focusedLabelColor = PrimaryOrangeRed,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
                     )
                 )
 

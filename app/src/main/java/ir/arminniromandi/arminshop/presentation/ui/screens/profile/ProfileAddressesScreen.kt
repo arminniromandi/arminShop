@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.domain.model.UserAddress
 import ir.arminniromandi.arminshop.presentation.components.AddEditAddressBottomSheet
 import ir.arminniromandi.arminshop.presentation.components.TopInfoMinify
+import ir.arminniromandi.arminshop.presentation.ui.theme.ArminShopTheme
 import ir.arminniromandi.arminshop.presentation.ui.theme.PrimaryOrangeRed
 import ir.arminniromandi.arminshop.presentation.ui.theme.ScreenBackground
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextDarkColor
@@ -66,6 +68,9 @@ fun ProfileAddressesScreen(
 ) {
     val addresses by viewModel.addresses.collectAsStateWithLifecycle()
     val defaultAddress by viewModel.defaultAddress.collectAsStateWithLifecycle()
+    val selectedAddress by viewModel.selectedAddress.collectAsStateWithLifecycle()
+
+    val activeAddress = selectedAddress ?: defaultAddress ?: addresses.firstOrNull()
 
     var isBottomSheetOpen by remember { mutableStateOf(false) }
     var addressToEdit by remember { mutableStateOf<UserAddress?>(null) }
@@ -94,6 +99,17 @@ fun ProfileAddressesScreen(
                         .padding(bottom = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "بازگشت",
+                            tint = TextDarkColor
+                        )
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
 
                     Text(
                         text = "آدرس های من",
@@ -128,7 +144,7 @@ fun ProfileAddressesScreen(
                         contentPadding = PaddingValues(bottom = 12.dp)
                     ) {
                         items(addresses, key = { it.id }) { address ->
-                            val isDefault = address.isDefault || (defaultAddress?.id == address.id)
+                            val isDefault = activeAddress?.id == address.id
 
                             ProfileAddressCard(
                                 address = address,
@@ -352,5 +368,50 @@ private fun AddressFieldRow(label: String, value: String) {
             ),
             modifier = Modifier.weight(1f)
         )
+    }
+}
+
+@Preview(showBackground = true, locale = "fa")
+@Composable
+private fun ProfileAddressesScreenPreview() {
+    ArminShopTheme {
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(ScreenBackground)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                ProfileAddressCard(
+                    address = UserAddress(
+                        id = 1,
+                        recipientName = "آرمین نیرومندی",
+                        fullAddress = "تهران، ملارد، خیابان اصلی، پلاک ۱۲",
+                        postalCode = "۱۲۳۴۵۶۷۸۹۰",
+                        phoneNumber = "۰۹۰۳۱۳۱۲۷۱۹",
+                        isDefault = true
+                    ),
+                    isDefault = true,
+                    onSetDefault = {},
+                    onEdit = {},
+                    onDelete = {}
+                )
+                ProfileAddressCard(
+                    address = UserAddress(
+                        id = 2,
+                        recipientName = "علی محمدی",
+                        fullAddress = "تهران، میدان آزادی، خیابان دوم، پلاک ۵",
+                        postalCode = "۹۸۷۶۵۴۳۲۱۰",
+                        phoneNumber = "۰۹۱۲۳۴۵۶۷۸۹",
+                        isDefault = false
+                    ),
+                    isDefault = false,
+                    onSetDefault = {},
+                    onEdit = {},
+                    onDelete = {}
+                )
+            }
+        }
     }
 }

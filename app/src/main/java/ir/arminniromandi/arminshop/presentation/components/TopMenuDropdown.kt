@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,13 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
-import androidx.compose.material.icons.outlined.AssignmentTurnedIn
-import androidx.compose.material.icons.outlined.Call
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.SupportAgent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -43,8 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +47,7 @@ import ir.arminniromandi.arminshop.presentation.ui.theme.TextDarkColor
 
 data class TopMenuDropdownItem(
     val title: String,
-    val icon: ImageVector,
+    val icon: Int,
     val onClick: () -> Unit
 )
 
@@ -66,13 +56,12 @@ fun TopMenuDropdown(
     isOpen: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    userName: String = "بهرام افشاری",
-    userPhone: String = "۰۹۱۵۳۴۳۶۴۶۷",
-    userAvatarRes: Int = R.drawable.malecloth,
+    userName: String? = null,
+    userEmail: String? = null,
+    userPhone: String? = null,
+
     onProfileClick: () -> Unit = {},
     onOrdersClick: () -> Unit = {},
-    onSupportClick: () -> Unit = {},
-    onTermsClick: () -> Unit = {},
     onAboutUsClick: () -> Unit = {},
     onContactUsClick: () -> Unit = {}
 ) {
@@ -141,41 +130,41 @@ fun TopMenuDropdown(
                             Box(
                                 modifier = Modifier
                                     .size(48.dp)
-                                    .clip(CircleShape),
+                                    .clip(CircleShape)
+                                    .background(Color.LightGray),
                                 contentAlignment = Alignment.Center
-                            ) {
-                                Image(
-                                    painter = painterResource(id = userAvatarRes),
-                                    contentDescription = userName,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
+                            ){
+                                Text(
+                                    if (!userName.isNullOrBlank()) userName.first().toString() else "ن",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        color = Color.DarkGray,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp
+                                    )
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = userName,
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        color = TextDarkColor,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp
-                                    )
+                            Text(
+                                text = if (!userName.isNullOrBlank()) userName else "نام کاربر ثبت نشده",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    color = TextDarkColor,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
                                 )
+                            )
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+
 
                                 Text(
-                                    text = userPhone,
+                                    text = if (!userEmail.isNullOrBlank()) userEmail else if (!userPhone.isNullOrBlank()) userPhone else "ایمیل یا شماره ثبت نشده",
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = Color.Gray,
                                         fontSize = 13.sp
                                     )
                                 )
-                            }
+
                         }
                     }
 
@@ -183,27 +172,19 @@ fun TopMenuDropdown(
 
                     // Menu items list
                     val menuItems = listOf(
-                        TopMenuDropdownItem("پروفایل کاربری", Icons.Outlined.Person) {
+                        TopMenuDropdownItem("پروفایل کاربری", R.drawable.user_nav) {
                             onProfileClick()
                             onDismissRequest()
                         },
-                        TopMenuDropdownItem("سفارشات من", Icons.AutoMirrored.Outlined.ReceiptLong) {
+                        TopMenuDropdownItem("سفارشات من", R.drawable.task_square) {
                             onOrdersClick()
                             onDismissRequest()
                         },
-                        TopMenuDropdownItem("پشتیبانی", Icons.Outlined.SupportAgent) {
-                            onSupportClick()
-                            onDismissRequest()
-                        },
-                        TopMenuDropdownItem("قوانین و مقررات", Icons.Outlined.AssignmentTurnedIn) {
-                            onTermsClick()
-                            onDismissRequest()
-                        },
-                        TopMenuDropdownItem("درباره ما", Icons.Outlined.Groups) {
+                        TopMenuDropdownItem("درباره ما", R.drawable.people) {
                             onAboutUsClick()
                             onDismissRequest()
                         },
-                        TopMenuDropdownItem("ارتباط با ما", Icons.Outlined.Call) {
+                        TopMenuDropdownItem("ارتباط با ما", R.drawable.music_play) {
                             onContactUsClick()
                             onDismissRequest()
                         }
@@ -244,7 +225,7 @@ fun TopMenuDropdown(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = item.icon,
+                                        painter =painterResource(item.icon) ,
                                         contentDescription = item.title,
                                         tint = Color(0xFFFA4A23),
                                         modifier = Modifier.size(20.dp)

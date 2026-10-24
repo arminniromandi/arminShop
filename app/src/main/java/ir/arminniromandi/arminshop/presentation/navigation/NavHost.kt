@@ -23,6 +23,7 @@ import androidx.navigation.navArgument
 import ir.arminniromandi.arminshop.presentation.animation.LocalNavAnimatedVisibilityScope
 import ir.arminniromandi.arminshop.presentation.animation.LocalSharedTransitionScope
 import ir.arminniromandi.arminshop.presentation.ui.screens.CartScreen
+import ir.arminniromandi.arminshop.presentation.ui.screens.ContactUsScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.EditProfileScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.HomeScreen
 import ir.arminniromandi.arminshop.presentation.ui.screens.LoginScreen
@@ -337,6 +338,16 @@ fun MainNavHost(
                                 },
                                 userName = userName,
                                 phoneNumber = phoneNumber
+                            )
+                        }
+                    }
+
+                    composable(ScreensRoute.ContactUs.route) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            ContactUsScreen(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
                             )
                         }
                     }

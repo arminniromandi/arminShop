@@ -39,7 +39,7 @@ class LauncherActivity : ComponentActivity() {
                 Column (modifier = Modifier.fillMaxSize()) {
 
                     Image(
-                        painter = painterResource(id = R.drawable.splashscreenimage),
+                        painter = painterResource(id = R.drawable.spalsh_screen),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
