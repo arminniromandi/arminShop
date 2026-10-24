@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.data.local.entity.OrderEntity
 import ir.arminniromandi.arminshop.presentation.components.TopInfoMinify
 import ir.arminniromandi.arminshop.presentation.components.formatPersianPrice
+import ir.arminniromandi.arminshop.presentation.components.ProductImage
 import ir.arminniromandi.arminshop.presentation.ui.theme.ScreenBackground
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextDarkColor
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextGrayColor
@@ -255,8 +256,9 @@ private fun OrderItemCard(
                     .background(Color(0xFFF1F3F5)),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = order.productImageRes),
+                ProductImage(
+                    imageUrl = order.productImageUrl,
+                    fallbackRes = order.productImageRes,
                     contentDescription = order.productName,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier

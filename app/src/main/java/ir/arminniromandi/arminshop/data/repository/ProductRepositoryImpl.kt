@@ -234,7 +234,7 @@ class ProductRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun addComment(productId: Int, comment: ProductComment): Unit = withContext(Dispatchers.IO) {
+        override suspend fun addComment(productId: Int, comment: ProductComment, isReply: Boolean): Unit = withContext(Dispatchers.IO) {
         checkAndSeedDatabase()
 
         // 1. Enforce business rule: review text MUST not be blank
@@ -249,12 +249,14 @@ class ProductRepositoryImpl @Inject constructor(
         val currentReviewsCount = existingProductWithComments?.comments?.size ?: 0
 
         // 3. Client-side recalculation of new average rating
-        val newReviewsCount = currentReviewsCount + 1
-        val newAverageRating = if (currentReviewsCount > 0) {
-            val totalScore = (currentRating * currentReviewsCount) + comment.rating
-            ((totalScore / newReviewsCount * 10).roundToInt() / 10f)
+        // If it is a reply or user rating is 0, do not modify product rating or count
+        val shouldUpdateRating = !isReply && comment.rating > 0
+        val newReviewsCount = if (shouldUpdateRating) currentReviewsCount + 1 else currentReviewsCount
+        val newAverageRating = if (shouldUpdateRating) {
+            val roundedRating = ((currentRating + comment.rating) / 2.0f * 10).roundToInt() / 10f
+            roundedRating.coerceIn(1.0f, 5.0f)
         } else {
-            ((comment.rating * 10).roundToInt() / 10f)
+            currentRating
         }
 
         // 4. Try sending to server if online
@@ -264,17 +266,19 @@ class ProductRepositoryImpl @Inject constructor(
                 productId = productId,
                 request = AddCommentRequest(
                     content = trimmedText,
-                    rating = comment.rating.toInt().coerceIn(1, 5)
+                    rating = if (shouldUpdateRating) comment.rating.toInt().coerceIn(1, 5) else 5
                 )
             )
             Log.d(TAG, "Server comment response: ${commentResponse.code()} ${commentResponse.message()}")
 
-            // Send updated calculated rating to server
-            val ratingResponse = apiService.updateRating(
-                id = productId,
-                request = UpdateRatingRequest(rating = newAverageRating)
-            )
-            Log.d(TAG, "Server rating response: ${ratingResponse.code()} ${ratingResponse.message()}")
+            // Send updated calculated rating to server only if rating was updated
+            if (shouldUpdateRating) {
+                val ratingResponse = apiService.updateRating(
+                    id = productId,
+                    request = UpdateRatingRequest(rating = newAverageRating)
+                )
+                Log.d(TAG, "Server rating response: ${ratingResponse.code()} ${ratingResponse.message()}")
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to submit comment/rating to server (offline mode): ${e.message}")
         }
@@ -283,10 +287,12 @@ class ProductRepositoryImpl @Inject constructor(
         val commentEntity = comment.toEntity(productId)
         productDao.insertComment(commentEntity)
 
-        productDao.updateProductRatingAndReviewCount(
-            productId = productId,
-            newRating = newAverageRating,
-            newReviewsCount = newReviewsCount
-        )
+        if (shouldUpdateRating) {
+            productDao.updateProductRatingAndReviewCount(
+                productId = productId,
+                newRating = newAverageRating,
+                newReviewsCount = newReviewsCount
+            )
+        }
     }
 }

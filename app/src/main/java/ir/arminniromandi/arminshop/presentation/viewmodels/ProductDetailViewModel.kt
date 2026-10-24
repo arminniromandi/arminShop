@@ -118,7 +118,7 @@ class ProductDetailViewModel @Inject constructor(
                 date = currentDate
             )
             try {
-                productRepository.addComment(productId, newComment)
+                productRepository.addComment(productId, newComment, isReply = true)
                 _commentText.value = ""
                 _userRating.value = 5f
                 _userMessage.emit("نظر و امتیاز شما با موفقیت ثبت شد")
@@ -128,7 +128,7 @@ class ProductDetailViewModel @Inject constructor(
         }
     }
 
-    fun submitReply(replyText: String, replyRating: Float = 5f, customUserName: String? = null) {
+    fun submitReply(replyText: String, customUserName: String? = null) {
         val text = replyText.trim()
         if (text.isBlank()) return
 
@@ -145,12 +145,12 @@ class ProductDetailViewModel @Inject constructor(
             val newComment = ProductComment(
                 id = 0,
                 userName = resolvedName,
-                rating = replyRating,
+                rating = 0f,
                 text = text,
                 date = currentDate
             )
             try {
-                productRepository.addComment(productId, newComment)
+                productRepository.addComment(productId, newComment, isReply = true)
                 _userMessage.emit("پاسخ شما با موفقیت ثبت شد")
             } catch (e: Exception) {
                 _userMessage.emit(e.message ?: "خطا در ثبت پاسخ")

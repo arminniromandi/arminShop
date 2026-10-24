@@ -169,6 +169,7 @@ class CartSharedViewModel @Inject constructor(
                         productId = item.productId,
                         productName = item.name,
                         productImageRes = item.imageRes,
+                        productImageUrl = item.imageUrl,
                         price = item.price,
                         quantity = item.quantity,
                         isPaymentSuccess = true,

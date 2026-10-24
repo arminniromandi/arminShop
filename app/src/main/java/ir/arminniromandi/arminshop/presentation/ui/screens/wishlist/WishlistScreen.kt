@@ -53,6 +53,7 @@ import ir.arminniromandi.arminshop.R
 import ir.arminniromandi.arminshop.domain.model.Product
 import ir.arminniromandi.arminshop.presentation.components.TopInfoMinify
 import ir.arminniromandi.arminshop.presentation.components.formatPersianPrice
+import ir.arminniromandi.arminshop.presentation.components.ProductImage
 import ir.arminniromandi.arminshop.presentation.ui.theme.PrimaryOrangeRed
 import ir.arminniromandi.arminshop.presentation.ui.theme.ScreenBackground
 import ir.arminniromandi.arminshop.presentation.ui.theme.TextDarkColor
@@ -60,6 +61,7 @@ import ir.arminniromandi.arminshop.presentation.ui.theme.TextGrayColor
 import ir.arminniromandi.arminshop.presentation.viewmodels.WishlistViewModel
 
 data class WishlistItemUi(
+    val imageUrl: String? = null,
     val id: Int,
     val title: String,
     val imageRes: Int,
@@ -144,6 +146,7 @@ fun WishlistScreen(
                                 id = product.id,
                                 title = product.name,
                                 imageRes = product.imageRes,
+                                imageUrl = product.imageUrl,
                                 discountPercent = product.discountPrec,
                                 mainPrice = product.mainPrice,
                                 finalPrice = if (product.discountPrec > 0 && product.finalPrice > 0) product.finalPrice else product.mainPrice
@@ -230,8 +233,9 @@ private fun WishlistCard(
                     .padding(vertical = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = item.imageRes),
+                ProductImage(
+                    imageUrl = item.imageUrl,
+                    fallbackRes = item.imageRes,
                     contentDescription = item.title,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()

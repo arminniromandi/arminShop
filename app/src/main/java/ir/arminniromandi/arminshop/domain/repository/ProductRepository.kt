@@ -10,6 +10,6 @@ interface ProductRepository {
     fun getProductById(productId: Int): Flow<Product?>
     fun searchProducts(query: String): Flow<List<Product>>
     fun getProductsByCategory(categoryId: String, query: String = ""): Flow<List<Product>>
-    suspend fun addComment(productId: Int, comment: ProductComment)
+    suspend fun addComment(productId: Int, comment: ProductComment, isReply: Boolean = false)
     suspend fun refreshAll()
 }

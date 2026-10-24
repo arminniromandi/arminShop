@@ -12,6 +12,7 @@ data class OrderEntity(
     val productId: Int,
     val productName: String,
     val productImageRes: Int,
+    val productImageUrl: String? = null,
     val price: Long,
     val quantity: Int = 1,
     val isPaymentSuccess: Boolean = true,

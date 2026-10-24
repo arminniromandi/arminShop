@@ -47,6 +47,7 @@ class CartRepositoryImpl @Inject constructor(
                             productId = item.productId,
                             name = p.name,
                             imageRes = ir.arminniromandi.arminshop.R.drawable.man_category,
+                            imageUrl = p.imageUrl,
                             price = p.price,
                             originalPrice = p.price,
                             quantity = item.quantity
@@ -83,6 +84,7 @@ class CartRepositoryImpl @Inject constructor(
                 productId = product.id,
                 name = product.name,
                 imageRes = product.imageRes,
+                imageUrl = product.imageUrl,
                 price = price,
                 originalPrice = originalPrice,
                 quantity = 1

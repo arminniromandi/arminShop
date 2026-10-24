@@ -51,6 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ir.arminniromandi.arminshop.data.local.entity.CartItemEntity
 import ir.arminniromandi.arminshop.presentation.components.formatPersianPrice
+import ir.arminniromandi.arminshop.presentation.components.ProductImage
 import ir.arminniromandi.arminshop.presentation.ui.theme.CardBgSlate
 import ir.arminniromandi.arminshop.presentation.ui.theme.PrimaryOrangeRed
 import ir.arminniromandi.arminshop.presentation.ui.theme.ScreenBackground
@@ -439,8 +440,9 @@ fun CartItemCardImageStyle(
                     .background(Color(0xFFF1F3F6)),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = item.imageRes),
+                ProductImage(
+                    imageUrl = item.imageUrl,
+                    fallbackRes = item.imageRes,
                     contentDescription = item.name,
                     modifier = Modifier
                         .fillMaxSize()
