@@ -1,5 +1,15 @@
 # Project specific R8 / ProGuard rules
 
+# ===================================================================
+# General & Attribute Preservations (Preserve annotations, line numbers, generics)
+# ===================================================================
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# Keep Kotlin metadata and intrinsics
+-keep class kotlin.Metadata { *; }
+-dontwarn kotlin.Unit
+
 # Keep Lifecycle observers and EmojiCompat initializer classes from being obfuscated or merged
 -keep class * implements androidx.lifecycle.LifecycleObserver { *; }
 -keep class * implements androidx.lifecycle.DefaultLifecycleObserver { *; }
@@ -8,3 +18,102 @@
 # Keep Kotlin reflect and text internal classes intact
 -keep class kotlin.text.** { *; }
 -keepclassmembers class kotlin.text.** { *; }
+
+# ===================================================================
+# Data Transfer Objects (DTOs) & Domain/UI Models
+# Ensures Gson deserialization works properly and no fields/classes are dropped
+# ===================================================================
+-keep class ir.arminniromandi.arminshop.data.remote.dto.** { *; }
+-keepclassmembers class ir.arminniromandi.arminshop.data.remote.dto.** { <fields>; <init>(...); }
+
+-keep class ir.arminniromandi.arminshop.domain.model.** { *; }
+-keep class ir.arminniromandi.arminshop.presentation.model.** { *; }
+
+# Keep all classes and fields annotated with Gson's @SerializedName
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+-keep class com.google.gson.** { *; }
+-keep class * implements com.google.gson.TypeAdapter
+-keep class * implements com.google.gson.TypeAdapterFactory
+-keep class * implements com.google.gson.JsonSerializer
+-keep class * implements com.google.gson.JsonDeserializer
+
+# ===================================================================
+# Room Database (DAOs, Entities, Database class)
+# ===================================================================
+-keep class androidx.room.** { *; }
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keep @androidx.room.Entity class * { *; }
+-keep @androidx.room.Dao interface * { *; }
+-keep class ir.arminniromandi.arminshop.data.local.entity.** { *; }
+-keep class ir.arminniromandi.arminshop.data.local.dao.** { *; }
+-keep class ir.arminniromandi.arminshop.data.local.AppDatabase { *; }
+-dontwarn androidx.room.paging.**
+
+# ===================================================================
+# Retrofit & OkHttp
+# ===================================================================
+-keep class retrofit2.** { *; }
+-keepclasseswithmembers class * {
+    @retrofit2.http.* <methods>;
+}
+-keep interface ir.arminniromandi.arminshop.data.remote.ShopApiService { *; }
+-keep class okhttp3.** { *; }
+-dontwarn retrofit2.**
+-dontwarn okhttp3.**
+-dontwarn okio.**
+
+# ===================================================================
+# Hilt & Dependency Injection & ViewModels
+# ===================================================================
+-keep class dagger.hilt.** { *; }
+-keep class * extends androidx.lifecycle.ViewModel { *; }
+-keep class ir.arminniromandi.arminshop.presentation.viewmodels.** { *; }
+-keep @dagger.hilt.android.lifecycle.HiltViewModel class * { *; }
+-keep @dagger.Module class * { *; }
+-keepclassmembers class * {
+    @javax.inject.Inject <init>(...);
+    @javax.inject.Inject <fields>;
+    @javax.inject.Inject <methods>;
+}
+-dontwarn dagger.hilt.**
+-dontwarn javax.annotation.**
+
+# ===================================================================
+# AndroidX Security Crypto & Google Tink
+# ===================================================================
+-keep class androidx.security.crypto.** { *; }
+-keep class com.google.crypto.tink.** { *; }
+-dontwarn androidx.security.crypto.**
+-dontwarn com.google.crypto.tink.**
+-keep class ir.arminniromandi.arminshop.data.local.security.** { *; }
+
+# ===================================================================
+# Coil (Image Loading)
+# ===================================================================
+-keep class coil.** { *; }
+-dontwarn coil.**
+
+# ===================================================================
+# Parcelable & Serializable
+# ===================================================================
+-keepclassmembers class * implements android.os.Parcelable {
+    static ** CREATOR;
+}
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    !static !transient <fields>;
+    !private <fields>;
+    !private <methods>;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}
+
+# ===================================================================
+# Kotlin Coroutines
+# ===================================================================
+-dontwarn kotlinx.coroutines.**
