@@ -8,14 +8,17 @@ import ir.arminniromandi.arminshop.data.remote.dto.SendOtpRequest
 import ir.arminniromandi.arminshop.data.remote.dto.VerifyOtpRequest
 import ir.arminniromandi.arminshop.domain.model.User
 import ir.arminniromandi.arminshop.domain.repository.UserRepository
+import ir.arminniromandi.arminshop.utils.ToastNotifier
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.json.JSONObject
 import javax.inject.Inject
 
 class UserRepositoryImpl @Inject constructor(
     private val userPreferencesDataSource: UserPreferencesDataSource,
     private val secureTokenManager: SecureTokenManager,
-    private val shopApiService: ShopApiService
+    private val shopApiService: ShopApiService,
+    private val toastNotifier: ToastNotifier
 ) : UserRepository {
 
     companion object {
@@ -92,18 +95,21 @@ class UserRepositoryImpl @Inject constructor(
             val response = shopApiService.sendOtp(SendOtpRequest(email = email))
             if (response.isSuccessful) {
                 saveEmail(email)
-                Result.success(response.body()?.message ?: "کد تأیید به ایمیل شما ارسال شد")
+                val msg = response.body()?.message ?: "کد تأیید به ایمیل شما ارسال شد"
+                toastNotifier.showSuccess(msg)
+                Result.success(msg)
             } else {
-                val errorMsg = response.errorBody()?.string() ?: "خطا در ارسال کد تأیید"
-                Log.e(TAG, "sendOtp failed: $errorMsg")
-                // Still allow local flow if needed
-                saveEmail(email)
-                Result.success("کد تأیید ارسال شد")
+                val rawError = response.errorBody()?.string()
+                val parsedMessage = extractMessage(rawError) ?: "خطا در ارسال کد تأیید (کد ${response.code()})"
+                Log.e(TAG, "sendOtp failed: $parsedMessage")
+                toastNotifier.showServerError(response.code(), "ارسال کد تأیید", parsedMessage)
+                Result.failure(Exception(parsedMessage))
             }
         } catch (e: Exception) {
-            Log.w(TAG, "sendOtp network error (offline): ${e.message}")
-            saveEmail(email)
-            Result.success("کد تأیید ارسال شد (حالت آفلاین)")
+            Log.w(TAG, "sendOtp network error: ${e.message}")
+            val errorMsg = "خطا در برقراری ارتباط با سرور. لطفاً اتصال اینترنت را بررسی کنید."
+            toastNotifier.showNetworkError("ارسال کد تأیید")
+            Result.failure(Exception(errorMsg))
         }
     }
 
@@ -119,31 +125,39 @@ class UserRepositoryImpl @Inject constructor(
                     userPreferencesDataSource.saveEmail(email)
                     userPreferencesDataSource.saveLoginState(true)
                     Log.d(TAG, "Successfully authenticated with JWT token")
+                    toastNotifier.showSuccess("ورود با موفقیت انجام شد")
                     Result.success(true)
                 } else {
-                    Result.failure(Exception("توکن معتبر از سرور دریافت نشد"))
+                    val errorMsg = "توکن معتبر از سرور دریافت نشد"
+                    toastNotifier.showError(errorMsg)
+                    Result.failure(Exception(errorMsg))
                 }
             } else {
-                // Check fallback for offline/local test codes
-                if (code == "1234" || code == "0000" || code == "123456") {
-                    secureTokenManager.saveEmail(email)
-                    userPreferencesDataSource.saveEmail(email)
-                    userPreferencesDataSource.saveLoginState(true)
-                    Result.success(true)
-                } else {
-                    Result.failure(Exception("کد وارد شده نامعتبر است"))
-                }
+                val rawError = response.errorBody()?.string()
+                val parsed = extractMessage(rawError) ?: "کد تأیید وارد شده نامعتبر یا منقضی است"
+                Log.e(TAG, "verifyOtp failed: $parsed (Code: ${response.code()})")
+                toastNotifier.showServerError(response.code(), "تأیید کد", parsed)
+                Result.failure(Exception(parsed))
             }
         } catch (e: Exception) {
-            Log.w(TAG, "verifyOtp network error (offline): ${e.message}")
-            if (code == "1234" || code == "0000" || code == "123456") {
-                secureTokenManager.saveEmail(email)
-                userPreferencesDataSource.saveEmail(email)
-                userPreferencesDataSource.saveLoginState(true)
-                Result.success(true)
-            } else {
-                Result.failure(Exception("خطا در اتصال به سرور"))
+            Log.w(TAG, "verifyOtp network error: ${e.message}")
+            val errorMsg = "خطا در برقراری ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی کنید."
+            toastNotifier.showNetworkError("تأیید کد")
+            Result.failure(Exception(errorMsg))
+        }
+    }
+
+    private fun extractMessage(raw: String?): String? {
+        if (raw.isNullOrBlank()) return null
+        return try {
+            val json = JSONObject(raw)
+            when {
+                json.has("message") -> json.getString("message")
+                json.has("error") -> json.getString("error")
+                else -> null
             }
+        } catch (_: Exception) {
+            raw.takeIf { !it.contains("<html", ignoreCase = true) }
         }
     }
 }

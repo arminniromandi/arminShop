@@ -7,6 +7,7 @@ import ir.arminniromandi.arminshop.domain.repository.UserRepository
 import ir.arminniromandi.arminshop.domain.usecase.ValidateEmailUseCase
 import ir.arminniromandi.arminshop.domain.usecase.VerifyCodeUseCase
 import ir.arminniromandi.arminshop.presentation.ui.screens.LoginStep
+import ir.arminniromandi.arminshop.utils.ToastNotifier
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,7 +50,8 @@ data class LoginUiState(
 class LoginViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val validateEmailUseCase: ValidateEmailUseCase,
-    private val verifyCodeUseCase: VerifyCodeUseCase
+    private val verifyCodeUseCase: VerifyCodeUseCase,
+    private val toastNotifier: ToastNotifier
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -95,29 +97,42 @@ class LoginViewModel @Inject constructor(
         val currentEmail = _uiState.value.email.trim()
         if (!validateEmailUseCase(currentEmail)) {
             _uiState.update { it.copy(isEmailError = true) }
+            toastNotifier.showError("لطفاً یک نشانی ایمیل معتبر وارد کنید")
             return
         }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, isEmailError = false) }
             val result = userRepository.sendOtp(currentEmail)
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    currentStep = LoginStep.VERIFICATION_CODE,
-                    timerSeconds = 201,
-                    isCodeError = false,
-                    statusMessage = result.getOrNull()
-                )
+            if (result.isSuccess) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        currentStep = LoginStep.VERIFICATION_CODE,
+                        timerSeconds = 201,
+                        isCodeError = false,
+                        statusMessage = result.getOrNull()
+                    )
+                }
+                startTimer()
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isEmailError = true
+                    )
+                }
             }
-            startTimer()
         }
     }
 
     fun submitVerificationCode() {
         val code = _uiState.value.verificationCode.trim()
         val currentEmail = _uiState.value.email.trim()
-        if (code.isBlank()) return
+        if (code.isBlank()) {
+            toastNotifier.showError("لطفاً کد تأیید را وارد کنید")
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -145,7 +160,10 @@ class LoginViewModel @Inject constructor(
 
     fun submitUserInfo(onSuccess: () -> Unit) {
         val currentName = _uiState.value.fullName.trim()
-        if (currentName.isBlank()) return
+        if (currentName.isBlank()) {
+            toastNotifier.showError("لطفاً نام و نام خانوادگی خود را وارد کنید")
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -154,6 +172,7 @@ class LoginViewModel @Inject constructor(
             userRepository.saveLoginState(true)
 
             _uiState.update { it.copy(isLoading = false) }
+            toastNotifier.showSuccess("اطلاعات شما با موفقیت ثبت شد")
             onSuccess()
         }
     }
@@ -173,15 +192,19 @@ class LoginViewModel @Inject constructor(
     fun resendCode() {
         val currentEmail = _uiState.value.email.trim()
         viewModelScope.launch {
-            userRepository.sendOtp(currentEmail)
+            _uiState.update { it.copy(isLoading = true) }
+            val result = userRepository.sendOtp(currentEmail)
             _uiState.update {
                 it.copy(
+                    isLoading = false,
                     timerSeconds = 201,
                     verificationCode = "",
                     isCodeError = false
                 )
             }
-            startTimer()
+            if (result.isSuccess) {
+                startTimer()
+            }
         }
     }
 

@@ -6,13 +6,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import ir.arminniromandi.arminshop.domain.model.Product
 import ir.arminniromandi.arminshop.domain.model.ProductCategory
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
+import ir.arminniromandi.arminshop.utils.ToastNotifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,7 +28,8 @@ data class HomeUiState(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val productRepository: ProductRepository
+    private val productRepository: ProductRepository,
+    private val toastNotifier: ToastNotifier
 ) : ViewModel() {
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -61,7 +62,9 @@ class HomeViewModel @Inject constructor(
             _isRefreshing.value = true
             try {
                 productRepository.refreshAll()
-            } catch (_: Exception) {
+                toastNotifier.showSuccess("اطلاعات فروشگاه با موفقیت به‌روزرسانی شد")
+            } catch (e: Exception) {
+                toastNotifier.showError(e.message ?: "خطا در برقراری ارتباط با سرور جهت بروزرسانی")
             } finally {
                 _isRefreshing.value = false
             }

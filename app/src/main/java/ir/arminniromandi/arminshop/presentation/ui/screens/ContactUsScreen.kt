@@ -359,14 +359,18 @@ fun ContactUsContent(
 
                     OutlinedButton(
                         onClick = {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(
-                                    Intent.EXTRA_TEXT,
-                                    "آرمین نیرومندی - آرمین شاپ\nموقعیت: $developerLocation\nشماره تماس: $phoneNumber"
-                                )
+                            try {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(
+                                        Intent.EXTRA_TEXT,
+                                        "آرمین نیرومندی - آرمین شاپ\nموقعیت: $developerLocation\nشماره تماس: $phoneNumber"
+                                    )
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری اطلاعات ارتباطی"))
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "امکان اشتراک‌گذاری اطلاعات وجود ندارد", Toast.LENGTH_SHORT).show()
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری اطلاعات ارتباطی"))
                         },
                         modifier = Modifier
                             .weight(1f)

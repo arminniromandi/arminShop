@@ -12,6 +12,7 @@ import ir.arminniromandi.arminshop.domain.repository.AddressRepository
 import ir.arminniromandi.arminshop.domain.repository.CartRepository
 import ir.arminniromandi.arminshop.domain.repository.NotificationRepository
 import ir.arminniromandi.arminshop.domain.repository.OrderRepository
+import ir.arminniromandi.arminshop.utils.ToastNotifier
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +39,8 @@ class CartSharedViewModel @Inject constructor(
     private val cartRepository: CartRepository,
     private val addressRepository: AddressRepository,
     private val orderRepository: OrderRepository,
-    private val notificationRepository: NotificationRepository
+    private val notificationRepository: NotificationRepository,
+    private val toastNotifier: ToastNotifier
 ) : ViewModel() {
 
     val shippingFee: Long = 100_000L
@@ -125,6 +127,7 @@ class CartSharedViewModel @Inject constructor(
         viewModelScope.launch {
             cartRepository.addToCart(product)
             showNotification("۱ آیتم به سبد خرید اضافه شد")
+            toastNotifier.showToast("«${product.name}» به سبد خرید افزوده شد")
         }
     }
 
@@ -137,12 +140,14 @@ class CartSharedViewModel @Inject constructor(
     fun removeFromCart(productId: Int) {
         viewModelScope.launch {
             cartRepository.removeFromCart(productId)
+            toastNotifier.showToast("کالا از سبد خرید حذف شد")
         }
     }
 
     fun clearCart() {
         viewModelScope.launch {
             cartRepository.clearCart()
+            toastNotifier.showToast("سبد خرید خالی شد")
         }
     }
 
@@ -153,15 +158,20 @@ class CartSharedViewModel @Inject constructor(
      * 3. Clears cart in Room database and posts payment success.
      */
     fun completePayment(deliveryAddress: UserAddress) {
+        val currentItems = cartItems.value
+        if (currentItems.isEmpty()) {
+            toastNotifier.showError("سبد خرید شما خالی است")
+            return
+        }
+
         val total = grandTotal.value
         val count = cartTotalCount.value
         val rawCode = Random.nextInt(10000, 99999).toString()
         val trackingCode = "#SH-$rawCode"
-        val currentItems = cartItems.value
 
         viewModelScope.launch {
-            // Save each item as an order entity
-            if (currentItems.isNotEmpty()) {
+            try {
+                // Save each item as an order entity
                 val orderEntities = currentItems.map { item ->
                     OrderEntity(
                         orderCode = rawCode,
@@ -177,29 +187,32 @@ class CartSharedViewModel @Inject constructor(
                     )
                 }
                 orderRepository.addOrders(orderEntities)
+
+                // Save order registration notification into database
+                val notification = NotificationEntity(
+                    title = "ثبت موفق سفارش",
+                    sender = "فروشگاه",
+                    date = "۲۶ مهر ۱۴۰۲",
+                    message = "سفارش شما با کد پیگیری $rawCode با موفقیت در فروشگاه ثبت شد و در حال آماده‌سازی می‌باشد.",
+                    isRead = false,
+                    orderCode = rawCode
+                )
+                notificationRepository.addNotification(notification)
+
+                // Clear the cart
+                cartRepository.clearCart()
+
+                _orderSuccessInfo.value = OrderSuccessInfo(
+                    orderTrackingCode = trackingCode,
+                    totalAmount = total,
+                    itemsCount = count,
+                    recipientName = deliveryAddress.recipientName,
+                    address = deliveryAddress.fullAddress
+                )
+                toastNotifier.showSuccess("پرداخت با موفقیت انجام شد و سفارش ثبت گردید")
+            } catch (e: Exception) {
+                toastNotifier.showError("خطا در ثبت سفارش: ${e.message}")
             }
-
-            // Save order registration notification into database
-            val notification = NotificationEntity(
-                title = "ثبت موفق سفارش",
-                sender = "فروشگاه",
-                date = "۲۶ مهر ۱۴۰۲",
-                message = "سفارش شما با کد پیگیری $rawCode با موفقیت در فروشگاه ثبت شد و در حال آماده‌سازی می‌باشد.",
-                isRead = false,
-                orderCode = rawCode
-            )
-            notificationRepository.addNotification(notification)
-
-            // Clear the cart
-            cartRepository.clearCart()
-
-            _orderSuccessInfo.value = OrderSuccessInfo(
-                orderTrackingCode = trackingCode,
-                totalAmount = total,
-                itemsCount = count,
-                recipientName = deliveryAddress.recipientName,
-                address = deliveryAddress.fullAddress
-            )
         }
     }
 

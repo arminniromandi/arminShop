@@ -26,7 +26,7 @@ import ir.arminniromandi.arminshop.data.local.entity.UserAddressEntity
         NotificationEntity::class,
         FavoriteEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

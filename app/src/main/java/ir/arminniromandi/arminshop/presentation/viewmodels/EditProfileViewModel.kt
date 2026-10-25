@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ir.arminniromandi.arminshop.domain.repository.UserRepository
+import ir.arminniromandi.arminshop.utils.ToastNotifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,7 +14,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val toastNotifier: ToastNotifier
 ) : ViewModel() {
 
     private val _fullName = MutableStateFlow("")
@@ -57,22 +59,39 @@ class EditProfileViewModel @Inject constructor(
     fun onGenderChange(value: String) { _gender.value = value }
 
     fun saveChanges() {
-        viewModelScope.launch {
-            val rawDigits = _birthDate.value.filter { it.isDigit() }.take(8)
-            val formattedBirthDate = if (rawDigits.length == 8) {
-                "${rawDigits.substring(0, 4)}/${rawDigits.substring(4, 6)}/${rawDigits.substring(6, 8)}"
-            } else {
-                _birthDate.value
-            }
+        val trimmedName = _fullName.value.trim()
+        if (trimmedName.isBlank()) {
+            toastNotifier.showError("لطفاً نام و نام خانوادگی خود را وارد کنید")
+            return
+        }
 
-            userRepository.saveUserProfile(
-                fullName = _fullName.value,
-                phoneNumber = _phoneNumber.value,
-                email = _email.value,
-                birthDate = formattedBirthDate,
-                gender = _gender.value
-            )
-            _isSaved.value = true
+        val trimmedPhone = _phoneNumber.value.trim()
+        if (trimmedPhone.isBlank() || trimmedPhone.length < 10) {
+            toastNotifier.showError("لطفاً شماره تلفن همراه معتبر (حداقل ۱۰ رقم) وارد کنید")
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val rawDigits = _birthDate.value.filter { it.isDigit() }.take(8)
+                val formattedBirthDate = if (rawDigits.length == 8) {
+                    "${rawDigits.substring(0, 4)}/${rawDigits.substring(4, 6)}/${rawDigits.substring(6, 8)}"
+                } else {
+                    _birthDate.value
+                }
+
+                userRepository.saveUserProfile(
+                    fullName = trimmedName,
+                    phoneNumber = trimmedPhone,
+                    email = _email.value.trim(),
+                    birthDate = formattedBirthDate,
+                    gender = _gender.value
+                )
+                toastNotifier.showSuccess("اطلاعات کاربری با موفقیت ذخیره شد")
+                _isSaved.value = true
+            } catch (e: Exception) {
+                toastNotifier.showError("خطا در ذخیره اطلاعات: ${e.message}")
+            }
         }
     }
 

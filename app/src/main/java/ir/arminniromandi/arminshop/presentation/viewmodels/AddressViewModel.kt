@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import ir.arminniromandi.arminshop.domain.model.UserAddress
 import ir.arminniromandi.arminshop.domain.repository.AddressRepository
+import ir.arminniromandi.arminshop.utils.ToastNotifier
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -18,7 +19,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AddressViewModel @Inject constructor(
-    private val addressRepository: AddressRepository
+    private val addressRepository: AddressRepository,
+    private val toastNotifier: ToastNotifier
 ) : ViewModel() {
 
     val addresses: StateFlow<List<UserAddress>> = addressRepository.getAllAddresses()
@@ -47,10 +49,15 @@ class AddressViewModel @Inject constructor(
 
     fun setDefaultAddress(id: Long) {
         viewModelScope.launch {
-            addressRepository.setDefaultAddress(id)
-            val updated = addressRepository.getAddressById(id)
-            if (updated != null) {
-                _selectedAddress.value = updated
+            try {
+                addressRepository.setDefaultAddress(id)
+                val updated = addressRepository.getAddressById(id)
+                if (updated != null) {
+                    _selectedAddress.value = updated
+                }
+                toastNotifier.showSuccess("آدرس پیش‌فرض بروزرسانی شد")
+            } catch (e: Exception) {
+                toastNotifier.showError("خطا در تنظیم آدرس پیش‌فرض: ${e.message}")
             }
         }
     }
@@ -82,37 +89,49 @@ class AddressViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val userAddress = UserAddress(
-                id = id,
-                recipientName = recipientName.trim(),
-                fullAddress = fullAddress.trim(),
-                postalCode = postalCode.trim(),
-                phoneNumber = phoneNumber.trim(),
-                isDefault = isDefault
-            )
-            if (id == 0L) {
-                val newId = addressRepository.addAddress(userAddress)
-                val saved = userAddress.copy(id = newId)
-                _selectedAddress.value = saved
-                onSuccess(saved)
-            } else {
-                addressRepository.updateAddress(userAddress)
-                _selectedAddress.value = userAddress
-                onSuccess(userAddress)
+            try {
+                val userAddress = UserAddress(
+                    id = id,
+                    recipientName = recipientName.trim(),
+                    fullAddress = fullAddress.trim(),
+                    postalCode = postalCode.trim(),
+                    phoneNumber = phoneNumber.trim(),
+                    isDefault = isDefault
+                )
+                if (id == 0L) {
+                    val newId = addressRepository.addAddress(userAddress)
+                    val saved = userAddress.copy(id = newId)
+                    _selectedAddress.value = saved
+                    toastNotifier.showSuccess("آدرس جدید با موفقیت اضافه شد")
+                    onSuccess(saved)
+                } else {
+                    addressRepository.updateAddress(userAddress)
+                    _selectedAddress.value = userAddress
+                    toastNotifier.showSuccess("آدرس با موفقیت ویرایش شد")
+                    onSuccess(userAddress)
+                }
+            } catch (e: Exception) {
+                emitError("خطا در ذخیره آدرس: ${e.message}")
             }
         }
     }
 
     fun deleteAddress(id: Long) {
         viewModelScope.launch {
-            addressRepository.deleteAddress(id)
-            if (_selectedAddress.value?.id == id) {
-                _selectedAddress.value = null
+            try {
+                addressRepository.deleteAddress(id)
+                if (_selectedAddress.value?.id == id) {
+                    _selectedAddress.value = null
+                }
+                toastNotifier.showToast("آدرس حذف شد")
+            } catch (e: Exception) {
+                toastNotifier.showError("خطا در حذف آدرس: ${e.message}")
             }
         }
     }
 
     private fun emitError(msg: String) {
+        toastNotifier.showError(msg)
         viewModelScope.launch {
             _errorMessage.emit(msg)
         }

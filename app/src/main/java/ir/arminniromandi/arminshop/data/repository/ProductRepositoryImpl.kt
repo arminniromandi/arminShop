@@ -15,6 +15,7 @@ import ir.arminniromandi.arminshop.domain.model.ProductCategory
 import ir.arminniromandi.arminshop.domain.model.ProductComment
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
 import ir.arminniromandi.arminshop.utils.Constance
+import ir.arminniromandi.arminshop.utils.ToastNotifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -29,7 +30,8 @@ import kotlin.math.roundToInt
 
 class ProductRepositoryImpl @Inject constructor(
     private val productDao: ProductDao,
-    private val apiService: ShopApiService
+    private val apiService: ShopApiService,
+    private val toastNotifier: ToastNotifier
 ) : ProductRepository {
 
     companion object {
@@ -41,7 +43,11 @@ class ProductRepositoryImpl @Inject constructor(
     init {
         repositoryScope.launch {
             checkAndSeedDatabase()
-            refreshAll()
+            try {
+                refreshAllInternal(isManual = false)
+            } catch (e: Exception) {
+                Log.w(TAG, "Initial background sync completed with note: ${e.message}")
+            }
         }
     }
 
@@ -60,50 +66,92 @@ class ProductRepositoryImpl @Inject constructor(
     }
 
     override suspend fun refreshAll() = withContext(Dispatchers.IO) {
-        syncSpecialOffers()
-        syncAllCategories()
+        refreshAllInternal(isManual = true)
+    }
+
+    private suspend fun refreshAllInternal(isManual: Boolean) {
+        var anyError: Exception? = null
+
+        try {
+            syncSpecialOffers()
+        } catch (e: Exception) {
+            anyError = e
+        }
+
+        try {
+            syncAllCategories()
+        } catch (e: Exception) {
+            if (anyError == null) anyError = e
+        }
+
+        if (anyError != null && isManual) {
+            throw anyError
+        }
     }
 
     private suspend fun syncSpecialOffers() {
-        try {
-            val response = apiService.getSpecialOffers()
-            if (response.isSuccessful) {
-                val dtos = response.body()?.specialOffers ?: emptyList()
-                if (dtos.isNotEmpty()) {
-                    val entities = dtos.map { dto ->
-                        dto.copy(isSpecialOffer = true).toEntity()
-                    }
-                    productDao.insertProducts(entities)
-                    Log.d(TAG, "Successfully synced ${entities.size} special offers")
+        val response = apiService.getSpecialOffers()
+        if (response.isSuccessful) {
+            val dtos = response.body()?.specialOffers ?: emptyList()
+            if (dtos.isNotEmpty()) {
+                val entities = dtos.map { dto ->
+                    dto.copy(isSpecialOffer = true).toEntity()
                 }
+                productDao.insertProducts(entities)
+
+                // Persist comments included in special offer DTOs
+                val commentEntities = dtos.flatMap { dto ->
+                    dto.comments?.map { it.toEntity(dto.id) } ?: emptyList()
+                }
+                if (commentEntities.isNotEmpty()) {
+                    productDao.insertComments(commentEntities)
+                }
+                Log.d(TAG, "Successfully synced ${entities.size} special offers")
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Offline or server unreachable for special offers: ${e.message}")
+        } else {
+            Log.w(TAG, "Special offers sync returned HTTP ${response.code()}: ${response.message()}")
+            throw Exception("خطا در دریافت پیشنهادات شگفت‌انگیز (کد ${response.code()})")
         }
     }
 
     private suspend fun syncAllCategories() {
         val categories = listOf("مردانه", "زنانه", "کفش", "بچه گانه")
+        var failureCount = 0
         for (category in categories) {
-            syncCategoryProducts(category)
+            try {
+                syncCategoryProducts(category)
+            } catch (e: Exception) {
+                failureCount++
+                Log.w(TAG, "Failed syncing category $category: ${e.message}")
+            }
+        }
+        if (failureCount == categories.size) {
+            throw Exception("امکان ارتباط با سرور برای دریافت محصولات دسته‌بندی‌ها وجود ندارد")
         }
     }
 
     private suspend fun syncCategoryProducts(categoryIdentifier: String) {
-        try {
-            val response = apiService.getProductsByCategory(categoryIdentifier)
-            if (response.isSuccessful) {
-                val dtos = response.body()?.products ?: emptyList()
-                if (dtos.isNotEmpty()) {
-                    val entities = dtos.map { dto ->
-                        dto.toEntity()
-                    }
-                    productDao.insertProducts(entities)
-                    Log.d(TAG, "Successfully synced ${entities.size} products for category $categoryIdentifier")
+        val response = apiService.getProductsByCategory(categoryIdentifier)
+        if (response.isSuccessful) {
+            val dtos = response.body()?.products ?: emptyList()
+            if (dtos.isNotEmpty()) {
+                val entities = dtos.map { dto ->
+                    dto.toEntity()
                 }
+                productDao.insertProducts(entities)
+
+                // Persist nested comments if present
+                val commentEntities = dtos.flatMap { dto ->
+                    dto.comments?.map { it.toEntity(dto.id) } ?: emptyList()
+                }
+                if (commentEntities.isNotEmpty()) {
+                    productDao.insertComments(commentEntities)
+                }
+                Log.d(TAG, "Successfully synced ${entities.size} products for category $categoryIdentifier")
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Offline or server unreachable for category $categoryIdentifier: ${e.message}")
+        } else {
+            Log.w(TAG, "Category $categoryIdentifier sync returned HTTP ${response.code()}: ${response.message()}")
+            throw Exception("خطای سرور در دریافت دسته $categoryIdentifier (کد ${response.code()})")
         }
     }
 
@@ -116,7 +164,14 @@ class ProductRepositoryImpl @Inject constructor(
                     val entity = dto.toEntity()
                     productDao.insertProduct(entity)
 
-                    // Also sync comments if present in product details or comments endpoint
+                    // Persist comments attached to the product dto
+                    dto.comments?.let { comments ->
+                        if (comments.isNotEmpty()) {
+                            productDao.insertComments(comments.map { it.toEntity(productId) })
+                        }
+                    }
+
+                    // Also sync comments endpoint if available
                     val commentsResponse = apiService.getComments(productId)
                     if (commentsResponse.isSuccessful) {
                         val commentDtos = commentsResponse.body()?.comments ?: emptyList()
@@ -126,6 +181,8 @@ class ProductRepositoryImpl @Inject constructor(
                         }
                     }
                 }
+            } else {
+                Log.w(TAG, "Product $productId details sync returned HTTP ${response.code()}")
             }
         } catch (e: Exception) {
             Log.w(TAG, "Offline or server unreachable for product $productId: ${e.message}")
@@ -135,7 +192,13 @@ class ProductRepositoryImpl @Inject constructor(
     override fun getProducts(): Flow<List<Product>> {
         return flow {
             checkAndSeedDatabase()
-            repositoryScope.launch { refreshAll() }
+            repositoryScope.launch {
+                try {
+                    refreshAllInternal(isManual = false)
+                } catch (e: Exception) {
+                    Log.d(TAG, "Background products refresh note: ${e.message}")
+                }
+            }
             emitAll(
                 productDao.getProductsWithComments().map { list ->
                     if (list.isEmpty()) {
@@ -151,13 +214,18 @@ class ProductRepositoryImpl @Inject constructor(
     override fun getSpecialOffers(): Flow<List<Product>> {
         return flow {
             checkAndSeedDatabase()
-            repositoryScope.launch { syncSpecialOffers() }
+            repositoryScope.launch {
+                try {
+                    syncSpecialOffers()
+                } catch (e: Exception) {
+                    Log.d(TAG, "Background special offers sync note: ${e.message}")
+                }
+            }
             emitAll(
                 productDao.getSpecialOffersWithComments().map { list ->
                     if (list.isNotEmpty()) {
                         list.map { it.toDomain() }
                     } else {
-                        // Fallback from cache to any discounted products or sample
                         val all = productDao.getProductsWithComments().firstOrNull() ?: emptyList()
                         val discounted = all.filter { it.product.discountPrec > 0 }
                         if (discounted.isNotEmpty()) {
@@ -174,7 +242,9 @@ class ProductRepositoryImpl @Inject constructor(
     override fun getProductById(productId: Int): Flow<Product?> {
         return flow {
             checkAndSeedDatabase()
-            repositoryScope.launch { syncProductDetails(productId) }
+            repositoryScope.launch {
+                syncProductDetails(productId)
+            }
             emitAll(
                 productDao.getProductWithCommentsById(productId).map { productWithComments ->
                     productWithComments?.toDomain()
@@ -213,7 +283,13 @@ class ProductRepositoryImpl @Inject constructor(
         val trimmedQuery = query.trim()
         return flow {
             checkAndSeedDatabase()
-            repositoryScope.launch { syncCategoryProducts(categoryTitle) }
+            repositoryScope.launch {
+                try {
+                    syncCategoryProducts(categoryTitle)
+                } catch (e: Exception) {
+                    Log.d(TAG, "Background category products sync note: ${e.message}")
+                }
+            }
             emitAll(
                 productDao.getProductsByCategoryAndQuery(categoryEnumName, categoryTitle, trimmedQuery).map { list ->
                     val dbResults = list.map { it.toDomain() }
@@ -234,7 +310,7 @@ class ProductRepositoryImpl @Inject constructor(
         }
     }
 
-        override suspend fun addComment(productId: Int, comment: ProductComment, isReply: Boolean): Unit = withContext(Dispatchers.IO) {
+    override suspend fun addComment(productId: Int, comment: ProductComment, isReply: Boolean): Unit = withContext(Dispatchers.IO) {
         checkAndSeedDatabase()
 
         // 1. Enforce business rule: review text MUST not be blank
@@ -243,13 +319,12 @@ class ProductRepositoryImpl @Inject constructor(
             "متن نظر نمی‌تواند خالی باشد. امتیاز به تنهایی قابل ارسال نیست."
         }
 
-        // 2. Fetch current product rating & count from local DB
+        // 2. Fetch current product rating & count from local Room DB
         val existingProductWithComments = productDao.getProductWithCommentsById(productId).firstOrNull()
         val currentRating = existingProductWithComments?.product?.rating ?: 5.0f
         val currentReviewsCount = existingProductWithComments?.comments?.size ?: 0
 
         // 3. Client-side recalculation of new average rating
-        // If it is a reply or user rating is 0, do not modify product rating or count
         val shouldUpdateRating = !isReply && comment.rating > 0
         val newReviewsCount = if (shouldUpdateRating) currentReviewsCount + 1 else currentReviewsCount
         val newAverageRating = if (shouldUpdateRating) {
@@ -259,31 +334,7 @@ class ProductRepositoryImpl @Inject constructor(
             currentRating
         }
 
-        // 4. Try sending to server if online
-        try {
-            // Send comment first
-            val commentResponse = apiService.addComment(
-                productId = productId,
-                request = AddCommentRequest(
-                    content = trimmedText,
-                    rating = if (shouldUpdateRating) comment.rating.toInt().coerceIn(1, 5) else 5
-                )
-            )
-            Log.d(TAG, "Server comment response: ${commentResponse.code()} ${commentResponse.message()}")
-
-            // Send updated calculated rating to server only if rating was updated
-            if (shouldUpdateRating) {
-                val ratingResponse = apiService.updateRating(
-                    id = productId,
-                    request = UpdateRatingRequest(rating = newAverageRating)
-                )
-                Log.d(TAG, "Server rating response: ${ratingResponse.code()} ${ratingResponse.message()}")
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to submit comment/rating to server (offline mode): ${e.message}")
-        }
-
-        // 5. Update local Room database so offline-first works instantly
+        // 4. Update local Room database FIRST for 100% offline-first reliability
         val commentEntity = comment.toEntity(productId)
         productDao.insertComment(commentEntity)
 
@@ -293,6 +344,35 @@ class ProductRepositoryImpl @Inject constructor(
                 newRating = newAverageRating,
                 newReviewsCount = newReviewsCount
             )
+        }
+
+        // 5. Try synchronizing with backend API
+        try {
+            val commentResponse = apiService.addComment(
+                productId = productId,
+                request = AddCommentRequest(
+                    content = trimmedText,
+                    rating = if (shouldUpdateRating) comment.rating.toInt().coerceIn(1, 5) else 5
+                )
+            )
+
+            if (commentResponse.isSuccessful) {
+                if (shouldUpdateRating) {
+                    apiService.updateRating(
+                        id = productId,
+                        request = UpdateRatingRequest(rating = newAverageRating)
+                    )
+                }
+            } else {
+                toastNotifier.showServerError(
+                    code = commentResponse.code(),
+                    section = "ثبت نظر",
+                    rawError = "نظر به صورت آفلاین در دستگاه ثبت شد اما سرور با خطا پاسخ داد."
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to submit comment/rating to server (offline mode): ${e.message}")
+            toastNotifier.showToast("نظر شما به صورت آفلاین در دستگاه ذخیره شد")
         }
     }
 }

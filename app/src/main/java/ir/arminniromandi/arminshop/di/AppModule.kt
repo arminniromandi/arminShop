@@ -26,6 +26,7 @@ import ir.arminniromandi.arminshop.data.local.entity.ProductEntity
 import ir.arminniromandi.arminshop.data.local.security.SecureTokenManager
 import ir.arminniromandi.arminshop.data.mock.MockProducts
 import ir.arminniromandi.arminshop.data.remote.AuthInterceptor
+import ir.arminniromandi.arminshop.data.remote.ServerErrorInterceptor
 import ir.arminniromandi.arminshop.data.remote.ShopApiService
 import ir.arminniromandi.arminshop.data.repository.AddressRepositoryImpl
 import ir.arminniromandi.arminshop.data.repository.CartRepositoryImpl
@@ -42,6 +43,7 @@ import ir.arminniromandi.arminshop.domain.repository.OrderRepository
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
 import ir.arminniromandi.arminshop.domain.repository.UserRepository
 import ir.arminniromandi.arminshop.utils.Constance
+import ir.arminniromandi.arminshop.utils.ToastNotifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -70,12 +72,16 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+    fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor,
+        serverErrorInterceptor: ServerErrorInterceptor
+    ): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
+            .addInterceptor(serverErrorInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
@@ -104,12 +110,14 @@ object AppModule {
     fun provideUserRepository(
         userPreferencesDataSource: UserPreferencesDataSource,
         secureTokenManager: SecureTokenManager,
-        shopApiService: ShopApiService
+        shopApiService: ShopApiService,
+        toastNotifier: ToastNotifier
     ): UserRepository {
         return UserRepositoryImpl(
             userPreferencesDataSource = userPreferencesDataSource,
             secureTokenManager = secureTokenManager,
-            shopApiService = shopApiService
+            shopApiService = shopApiService,
+            toastNotifier = toastNotifier
         )
     }
 
@@ -164,9 +172,10 @@ object AppModule {
     @Singleton
     fun provideProductRepository(
         productDao: ProductDao,
-        shopApiService: ShopApiService
+        shopApiService: ShopApiService,
+        toastNotifier: ToastNotifier
     ): ProductRepository {
-        return ProductRepositoryImpl(productDao, shopApiService)
+        return ProductRepositoryImpl(productDao, shopApiService, toastNotifier)
     }
 
     @Provides

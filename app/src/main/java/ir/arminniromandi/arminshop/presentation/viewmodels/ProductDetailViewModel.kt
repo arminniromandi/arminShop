@@ -9,6 +9,7 @@ import ir.arminniromandi.arminshop.domain.model.ProductComment
 import ir.arminniromandi.arminshop.domain.repository.FavoriteRepository
 import ir.arminniromandi.arminshop.domain.repository.ProductRepository
 import ir.arminniromandi.arminshop.domain.repository.UserRepository
+import ir.arminniromandi.arminshop.utils.ToastNotifier
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,7 @@ class ProductDetailViewModel @Inject constructor(
     private val productRepository: ProductRepository,
     private val userRepository: UserRepository,
     private val favoriteRepository: FavoriteRepository,
+    private val toastNotifier: ToastNotifier,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -62,7 +64,13 @@ class ProductDetailViewModel @Inject constructor(
 
     fun toggleFavorite() {
         viewModelScope.launch {
+            val wasFav = isFavorite.value
             favoriteRepository.toggleFavorite(_productIdFlow.value)
+            if (wasFav) {
+                toastNotifier.showToast("از لیست علاقه‌مندی‌ها حذف شد")
+            } else {
+                toastNotifier.showSuccess("به لیست علاقه‌مندی‌ها اضافه شد")
+            }
         }
     }
 
@@ -93,8 +101,10 @@ class ProductDetailViewModel @Inject constructor(
     fun submitComment(customUserName: String? = null) {
         val text = _commentText.value.trim()
         if (text.isBlank()) {
+            val msg = "ثبت امتیاز تنها با نوشتن نظر امکان‌پذیر است. لطفاً نظر خود را بنویسید."
+            toastNotifier.showError(msg)
             viewModelScope.launch {
-                _userMessage.emit("ثبت امتیاز تنها با نوشتن نظر امکان‌پذیر است. لطفاً نظر خود را بنویسید.")
+                _userMessage.emit(msg)
             }
             return
         }
@@ -118,19 +128,26 @@ class ProductDetailViewModel @Inject constructor(
                 date = currentDate
             )
             try {
-                productRepository.addComment(productId, newComment, isReply = true)
+                productRepository.addComment(productId, newComment, isReply = false)
                 _commentText.value = ""
                 _userRating.value = 5f
-                _userMessage.emit("نظر و امتیاز شما با موفقیت ثبت شد")
+                val msg = "نظر و امتیاز شما با موفقیت ثبت شد"
+                toastNotifier.showSuccess(msg)
+                _userMessage.emit(msg)
             } catch (e: Exception) {
-                _userMessage.emit(e.message ?: "خطا در ثبت نظر")
+                val error = e.message ?: "خطا در ثبت نظر"
+                toastNotifier.showError(error)
+                _userMessage.emit(error)
             }
         }
     }
 
     fun submitReply(replyText: String, customUserName: String? = null) {
         val text = replyText.trim()
-        if (text.isBlank()) return
+        if (text.isBlank()) {
+            toastNotifier.showError("لطفاً متن پاسخ را وارد کنید")
+            return
+        }
 
         val dateFormat = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
         val currentDate = dateFormat.format(Date())
@@ -151,9 +168,13 @@ class ProductDetailViewModel @Inject constructor(
             )
             try {
                 productRepository.addComment(productId, newComment, isReply = true)
-                _userMessage.emit("پاسخ شما با موفقیت ثبت شد")
+                val msg = "پاسخ شما با موفقیت ثبت شد"
+                toastNotifier.showSuccess(msg)
+                _userMessage.emit(msg)
             } catch (e: Exception) {
-                _userMessage.emit(e.message ?: "خطا در ثبت پاسخ")
+                val error = e.message ?: "خطا در ثبت پاسخ"
+                toastNotifier.showError(error)
+                _userMessage.emit(error)
             }
         }
     }
