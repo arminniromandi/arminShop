@@ -122,7 +122,8 @@ fun MainScreen(
 
                                 navController.navigate(ScreensRoute.Notifications.route)
                             },
-                            firstLetter = currentUser?.fullName?.takeIf { it.isNotBlank() },
+                            firstLetter = currentUser?.fullName?.takeIf { it.isNotBlank() }?.first().toString() ?:"ن"
+                                ,
                             onMenuClick = {
                                 isMenuOpen = !isMenuOpen
                             },

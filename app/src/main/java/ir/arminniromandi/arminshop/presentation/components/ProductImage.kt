@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -36,6 +37,8 @@ fun ProductImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Fit
 ) {
+    val defaultFallback = if (fallbackRes != 0) fallbackRes else R.drawable.placeholder
+
     if (!imageUrl.isNullOrBlank()) {
         SubcomposeAsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
@@ -46,11 +49,14 @@ fun ProductImage(
             contentScale = contentScale,
             modifier = modifier,
             loading = {
-                ImageShimmerPlaceholder()
+                ImageShimmerPlaceholder(
+                    contentScale = contentScale,
+                    contentDescription = contentDescription
+                )
             },
             error = {
                 Image(
-                    painter = painterResource(id = if (fallbackRes != 0) fallbackRes else R.drawable.man_category),
+                    painter = painterResource(id = defaultFallback),
                     contentDescription = contentDescription,
                     contentScale = contentScale,
                     modifier = Modifier.fillMaxSize()
@@ -59,7 +65,7 @@ fun ProductImage(
         )
     } else {
         Image(
-            painter = painterResource(id = if (fallbackRes != 0) fallbackRes else R.drawable.man_category),
+            painter = painterResource(id = defaultFallback),
             contentDescription = contentDescription,
             contentScale = contentScale,
             modifier = modifier
@@ -69,11 +75,13 @@ fun ProductImage(
 
 @Composable
 fun ImageShimmerPlaceholder(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
+    contentDescription: String? = null
 ) {
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim by transition.animateFloat(
-        initialValue = 0f,
+        initialValue = -300f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
@@ -83,22 +91,34 @@ fun ImageShimmerPlaceholder(
     )
 
     val shimmerColors = listOf(
-        Color(0xFFEBEBEB),
-        Color(0xFFF7F7F7),
-        Color(0xFFEBEBEB)
+        Color(0x00FFFFFF),
+        Color(0x66FFFFFF),
+        Color(0x00FFFFFF)
     )
 
     val brush = Brush.linearGradient(
         colors = shimmerColors,
-        start = Offset(x = translateAnim - 300f, y = translateAnim - 300f),
+        start = Offset(x = translateAnim - 200f, y = translateAnim - 200f),
         end = Offset(x = translateAnim, y = translateAnim)
     )
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(12.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(brush)
-    )
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        // Base placeholder image
+        Image(
+            painter = painterResource(id = R.drawable.placeholder),
+            contentDescription = contentDescription,
+            contentScale = contentScale,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Shimmer effect overlay right on top of the placeholder image
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(brush)
+        )
+    }
 }

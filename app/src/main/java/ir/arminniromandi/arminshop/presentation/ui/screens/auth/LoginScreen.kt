@@ -127,9 +127,6 @@ fun LoginScreen(
     )
 }
 
-/**
- * Stateless Login Screen Composable adhering strictly to project theme & typography rules.
- */
 @Composable
 fun LoginScreenContent(
     uiState: LoginUiState,

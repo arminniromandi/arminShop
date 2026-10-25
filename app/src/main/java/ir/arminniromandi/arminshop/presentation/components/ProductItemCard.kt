@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import ir.arminniromandi.arminshop.R
 import ir.arminniromandi.arminshop.data.mock.MockProducts
 import ir.arminniromandi.arminshop.domain.model.Product
 import ir.arminniromandi.arminshop.presentation.animation.productSharedElement
@@ -86,12 +87,13 @@ fun ProductItemCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(160.dp)
+                .width(107.dp)
                 .padding(10.dp),
             contentAlignment = Alignment.Center
         ) {
             ProductImage(
                 imageUrl = product.imageUrl,
-                fallbackRes = product.imageRes,
+                fallbackRes = if (product.imageRes != 0 && product.imageRes != R.drawable.man_category) product.imageRes else R.drawable.placeholder,
                 contentDescription = product.name,
                 modifier = Modifier
                     .fillMaxSize()

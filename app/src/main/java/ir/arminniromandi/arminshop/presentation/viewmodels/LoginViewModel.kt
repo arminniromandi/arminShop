@@ -29,7 +29,7 @@ data class LoginUiState(
     val isLoading: Boolean = false,
     val isCodeError: Boolean = false,
     val isEmailError: Boolean = false,
-    val timerSeconds: Int = 201,
+    val timerSeconds: Int = 300,
     val isLoggedIn: Boolean? = null,
     val statusMessage: String? = null
 ) {
