@@ -403,7 +403,7 @@ private fun EmailStepContent(
         PrimaryButton(
             text = "تأیید و ادامه",
             onClick = { onSubmit()
-                Toast.makeText(context, "کد تایید 1234 یا 0000", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "کد تایید به ایمیل ارسال شد", Toast.LENGTH_LONG).show()
             },
             enabled = isSubmitEnabled
         )

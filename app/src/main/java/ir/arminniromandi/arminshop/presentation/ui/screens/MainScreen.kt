@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -123,7 +122,7 @@ fun MainScreen(
 
                                 navController.navigate(ScreensRoute.Notifications.route)
                             },
-                            firstLetter = currentUser?.fullName?.first().toString() ?: "ن",
+                            firstLetter = currentUser?.fullName?.takeIf { it.isNotBlank() },
                             onMenuClick = {
                                 isMenuOpen = !isMenuOpen
                             },
