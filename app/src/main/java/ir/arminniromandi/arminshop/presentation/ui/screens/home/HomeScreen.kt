@@ -1,4 +1,4 @@
-package ir.arminniromandi.arminshop.presentation.ui.screens
+package ir.arminniromandi.arminshop.presentation.ui.screens.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

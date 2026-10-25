@@ -7,13 +7,8 @@ import ir.arminniromandi.arminshop.presentation.navigation.ScreensRoute
 
 object Constance {
 
-    /**
-     * Base URL for Backend API
-     * For Android Emulator use: "http://10.0.2.2:8080/api/"
-     * For local PC browser/testing use: "http://localhost:8080/api/"
-     * For physical device use: "http://<YOUR_LAN_IP>:8080/api/"
-     */
-    const val BASE_URL = "http://10.0.2.2:8080/api/"
+
+    const val BASE_URL = "https://arminapp.darkube.ir/api/"
 
 
     val categories = listOf(

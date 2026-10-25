@@ -1,4 +1,4 @@
-package ir.arminniromandi.arminshop.presentation.ui.screens
+package ir.arminniromandi.arminshop.presentation.ui.screens.contact
 
 import android.content.Intent
 import android.net.Uri

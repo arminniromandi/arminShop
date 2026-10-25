@@ -1,4 +1,4 @@
-package ir.arminniromandi.arminshop.presentation.ui.screens
+package ir.arminniromandi.arminshop.presentation.ui.screens.cart
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

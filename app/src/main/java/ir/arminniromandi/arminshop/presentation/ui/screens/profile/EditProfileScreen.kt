@@ -1,4 +1,4 @@
-package ir.arminniromandi.arminshop.presentation.ui.screens
+package ir.arminniromandi.arminshop.presentation.ui.screens.profile
 
 import android.widget.Toast
 import androidx.compose.foundation.background

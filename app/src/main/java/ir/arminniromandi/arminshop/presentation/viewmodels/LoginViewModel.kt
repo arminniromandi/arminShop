@@ -6,7 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import ir.arminniromandi.arminshop.domain.repository.UserRepository
 import ir.arminniromandi.arminshop.domain.usecase.ValidateEmailUseCase
 import ir.arminniromandi.arminshop.domain.usecase.VerifyCodeUseCase
-import ir.arminniromandi.arminshop.presentation.ui.screens.LoginStep
+import ir.arminniromandi.arminshop.presentation.ui.screens.auth.LoginStep
 import ir.arminniromandi.arminshop.utils.ToastNotifier
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

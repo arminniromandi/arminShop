@@ -1,4 +1,4 @@
-package ir.arminniromandi.arminshop.presentation.ui.screens
+package ir.arminniromandi.arminshop.presentation.ui.screens.main
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
