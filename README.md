@@ -4,6 +4,9 @@
 
 ArminShop is built around a simple principle: **an unstable network should never ruin a shopping experience.** By treating local storage as the primary source of truth and syncing with the backend in the background, users can browse products, manage their cart, and explore deals instantly — online or offline.
 
+**Api Projct Codded With Golang**
+
+(Api Project Link)[https://github.com/arminniromandi/shopApi]
 ---
 
 ## ⚡ Tech Stack at a Glance
@@ -100,7 +103,7 @@ git clone https://github.com/your-username/arminShop.git
 Open the project in **Android Studio Ladybug (or newer)** with JDK 21+ configured.
 
 ### 2. Configure Backend URL
-Set your API endpoint inside [`Constance.kt`](file:///c:/Users/ARMINAPP/AndroidStudioProjects/arminShop/app/src/main/java/ir/arminniromandi/arminshop/utils/Constance.kt):
+Set your API endpoint inside [`Constance.kt`]:
 
 ```kotlin
 object Constance {
